@@ -3,6 +3,14 @@
 A Clojure(Script) library which implements a generic Hypermedia Application 
 Protocol (HAP) client.
 
+## Install
+
+To install, just add the following to your project dependencies:
+
+```clojure
+[org.clojars.akiel/hap-client-clj "0.1-SNAPSHOT"]
+```
+
 ## Usage
 
 ### Fetch a Representation
