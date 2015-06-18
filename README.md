@@ -1,3 +1,5 @@
+__This software is ALPHA.__
+
 # HAP Client Clojure
 
 A Clojure(Script) library which implements a generic Hypermedia Application 
