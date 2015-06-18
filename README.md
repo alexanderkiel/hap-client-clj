@@ -1,7 +1,7 @@
 # HAP Client Clojure
 
-A Clojure library which implements a generic Hypermedia Application Protocol 
-(HAP) client.
+A Clojure(Script) library which implements a generic Hypermedia Application 
+Protocol (HAP) client.
 
 ## Usage
 
