@@ -39,5 +39,4 @@ To install, just add the following to your project dependencies:
 
 Copyright © 2015 Alexander Kiel
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Distributed under the Eclipse Public License, the same as Clojure.
