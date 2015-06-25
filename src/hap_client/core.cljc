@@ -1,24 +1,22 @@
-#?(:clj
-   (ns hap-client.core
-     (:use plumbing.core)
-     (:require [clojure.core.async :as async]
-               [clojure.java.io :as io]
-               [org.httpkit.client :as http]
-               [cognitect.transit :as transit]
-               [hap-client.impl.uri :as uri])
-     (:import [java.io ByteArrayOutputStream])
-     (:refer-clojure :exclude [update])))
-
-#?(:cljs
-   (ns hap-client.core
-     (:require [plumbing.core :refer [map-vals]]
+(ns hap-client.core
+  #?(:clj
+     (:use plumbing.core))
+  (:require
+    #?@(:clj [[clojure.core.async :as async]
+              [clojure.java.io :as io]
+              [org.httpkit.client :as http]])
+    #?@(:cljs [[plumbing.core :refer [map-vals]]
                [cljs.core.async :as async]
                [goog.events :as events]
-               [cognitect.transit :as transit]
-               [hap-client.impl.uri :as uri]
-               [hap-client.impl.util :as util])
-     (:import [goog.net XhrIo EventType])
-     (:refer-clojure :exclude [update])))
+               [hap-client.impl.util :as util]])
+              [cognitect.transit :as transit]
+              [hap-client.impl.uri :as uri]
+              [hap-client.impl.schema :as schema])
+  #?(:clj
+     (:import [java.io ByteArrayOutputStream]))
+  #?(:cljs
+     (:import [goog.net XhrIo EventType]))
+  (:refer-clojure :exclude [update]))
 
 #?(:clj (set! *warn-on-reflection* true))
 
@@ -63,7 +61,8 @@
 (defn- parse-body [opts format body]
   (->> (read-transit body format)
        (uri/resolve-all (uri/create (:url opts)))
-       (create-resources)))
+       (create-resources)
+       (schema/resolve-schemas)))
 
 (defn- content-type-ex-info [opts content-type]
   (ex-info (str "Invalid Content-Type " content-type " while fetching "

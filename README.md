@@ -37,8 +37,32 @@ To install, just add the following to your project dependencies:
   (catch Throwable t t)))
 ```
 
+## Schema Support
+
+HAP query and form params can have a `:type`. HAP Client Clojure supports the
+following schemas specified as symbols or s-expressions by resolving them to
+there [Prismatic Schema][1] equivalents.
+
+ * [Str](http://prismatic.github.io/schema/schema.core.html#var-Str)
+ * [Bool](http://prismatic.github.io/schema/schema.core.html#var-Bool)
+ * [Num](http://prismatic.github.io/schema/schema.core.html#var-Num)
+ * [Int](http://prismatic.github.io/schema/schema.core.html#var-Int)
+ * [Keyword](http://prismatic.github.io/schema/schema.core.html#var-Keyword)
+ * [Symbol](http://prismatic.github.io/schema/schema.core.html#var-Symbol)
+ * [Regex](http://prismatic.github.io/schema/schema.core.html#var-Regex)
+ * [Inst](http://prismatic.github.io/schema/schema.core.html#var-Inst)
+ * [Uuid](http://prismatic.github.io/schema/schema.core.html#var-Uuid)
+ * [either](http://prismatic.github.io/schema/schema.core.html#var-either) 
+ * [both](http://prismatic.github.io/schema/schema.core.html#var-both) 
+ * [enum](http://prismatic.github.io/schema/schema.core.html#var-enum) 
+
+Unsupported forms are just passed through and not resolved. So library users
+can't be sure that `:type` values are always schemas.
+
 ## License
 
 Copyright © 2015 Alexander Kiel
 
 Distributed under the Eclipse Public License, the same as Clojure.
+
+[1]: <https://github.com/Prismatic/schema>
