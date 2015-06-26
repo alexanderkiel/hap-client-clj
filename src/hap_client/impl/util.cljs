@@ -15,5 +15,7 @@
 (defn- set-parameter-value! [uri k v]
   (.setParameterValue uri (name k) (write-transit v)))
 
-(defn set-query! [uri params]
+(defn set-query!
+  "Takes kvs from params and puts them as query params into the URI."
+  [uri params]
   (reduce-kv set-parameter-value! uri params))
