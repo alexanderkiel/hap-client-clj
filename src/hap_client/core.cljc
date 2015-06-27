@@ -64,17 +64,18 @@
        (create-resources)
        (schema/resolve-schemas)))
 
-(defn- content-type-ex-info [opts content-type]
-  (ex-info (str "Invalid Content-Type " content-type " while fetching "
-                (:url opts))
+(defn- content-type-ex-info [opts content-type status]
+  (ex-info (str (if content-type "Invalid" "Missing") " Content-Type "
+                content-type " while fetching " (:url opts))
            {:content-type content-type
-            :uri (uri/create (:url opts))}))
+            :uri (uri/create (:url opts))
+            :status status}))
 
-(defn- parse-response [{:keys [opts headers] :as resp}]
+(defn- parse-response [{:keys [opts headers status] :as resp}]
   (let [content-type (:content-type headers)]
     (if-let [format (media-types content-type)]
       (clojure.core/update resp :body #(parse-body opts format %))
-      (throw (content-type-ex-info opts content-type)))))
+      (throw (content-type-ex-info opts content-type status)))))
 
 (defn- error-ex-data [opts error]
   {:error error :uri (uri/create (:url opts))})
