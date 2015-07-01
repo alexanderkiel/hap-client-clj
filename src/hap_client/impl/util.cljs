@@ -1,7 +1,8 @@
 (ns hap-client.impl.util
   (:require [plumbing.core :refer [map-keys]]
             [clojure.string :as str]
-            [cognitect.transit :as transit]))
+            [cognitect.transit :as transit]
+            [outpace.schema-transit :as st]))
 
 (defn keyword-header [header]
   (keyword (str/lower-case header)))
@@ -10,7 +11,7 @@
   (map-keys keyword-header headers))
 
 (defn write-transit [x]
-  (transit/write (transit/writer :json) x))
+  (transit/write (transit/writer :json {:handlers st/write-handlers}) x))
 
 (defn- set-parameter-value! [uri k v]
   (.setParameterValue uri (name k) (write-transit v)))

@@ -4,15 +4,16 @@
   (:require
     #?@(:clj [[clojure.core.async :as async]
               [clojure.java.io :as io]
+              [clojure.walk :refer [postwalk]]
               [org.httpkit.client :as http]])
     #?@(:cljs [[plumbing.core :refer [map-vals]]
                [cljs.core.async :as async]
                [goog.events :as events]
-               [hap-client.impl.util :as util]])
-              [clojure.walk :refer [postwalk]]
+               [hap-client.impl.util :as util]
+               [hap-client.impl.walk :refer [postwalk]]])
               [cognitect.transit :as transit]
               [hap-client.impl.uri :as uri]
-              [hap-client.impl.schema :as schema])
+              [outpace.schema-transit :as st])
   #?(:clj
      (:import [java.io ByteArrayOutputStream]))
   #?(:cljs
@@ -31,7 +32,7 @@
 
 (def ^:private read-opts
   {:handlers
-   {"r" (transit/read-handler uri/create)}})
+   (assoc st/read-handlers "r" (transit/read-handler uri/create))})
 
 (defn- read-transit [in format]
   #?(:clj (transit/read (transit/reader in format read-opts)))
@@ -40,13 +41,13 @@
 (defn- write-transit [o]
   #?(:clj
      (let [out (ByteArrayOutputStream.)]
-       (transit/write (transit/writer out :json) o)
+       (transit/write (transit/writer out :json {:handlers st/write-handlers}) o)
        (io/input-stream (.toByteArray out)))))
 
 (defn- transit-write-str [o]
   #?(:clj
      (let [out (ByteArrayOutputStream.)]
-       (transit/write (transit/writer out :json) o)
+       (transit/write (transit/writer out :json {:handlers st/write-handlers}) o)
        (String. (.toByteArray out)))))
 
 (defn- create-resource [form]
@@ -62,8 +63,7 @@
 (defn- parse-body [opts format body]
   (->> (read-transit body format)
        (uri/resolve-all (uri/create (:url opts)))
-       (postwalk create-resources)
-       (schema/resolve-schemas)))
+       (postwalk create-resources)))
 
 (defn- content-type-ex-info [opts content-type status]
   (ex-info (str (if content-type "Invalid" "Missing") " Content-Type "
