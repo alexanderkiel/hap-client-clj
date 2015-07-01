@@ -9,6 +9,7 @@
                [cljs.core.async :as async]
                [goog.events :as events]
                [hap-client.impl.util :as util]])
+              [clojure.walk :refer [postwalk]]
               [cognitect.transit :as transit]
               [hap-client.impl.uri :as uri]
               [hap-client.impl.schema :as schema])
@@ -48,20 +49,20 @@
        (transit/write (transit/writer out :json) o)
        (String. (.toByteArray out)))))
 
-(defn- create-resource [link]
-  (resource (:href link)))
+(defn- create-resource [form]
+  (if-let [href (:href form)]
+    (resource href)
+    form))
 
-(defn- create-resources [doc]
-  (let [doc (clojure.core/update doc :links #(map-vals create-resource %))]
-    (if (:embedded doc)
-      (clojure.core/update doc :embedded
-                           (partial map-vals (partial mapv create-resources)))
-      doc)))
+(defn- create-resources [form]
+  (if (:links form)
+    (clojure.core/update form :links #(postwalk create-resource %))
+    form))
 
 (defn- parse-body [opts format body]
   (->> (read-transit body format)
        (uri/resolve-all (uri/create (:url opts)))
-       (create-resources)
+       (postwalk create-resources)
        (schema/resolve-schemas)))
 
 (defn- content-type-ex-info [opts content-type status]
