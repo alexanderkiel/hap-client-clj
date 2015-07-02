@@ -147,7 +147,7 @@
                           :body (.getResponseText xhr)}
                          (process-fetch-resp)
                          (async/put! ch))
-                (catch :default e (async/put! ch e)))
+                (catch js/Error e (async/put! ch e)))
               (async/close! ch)))
           (.send xhr (str resource) "GET" nil
                  #js {"Accept" "application/transit+json"})))
@@ -242,14 +242,14 @@
             xhr EventType.COMPLETE
             (fn [_]
               (try
-                (some->> {:opts {:url (str (:href form))}
-                          :status (.getStatus xhr)
-                          :headers (-> (js->clj (.getResponseHeaders xhr))
-                                       (util/keyword-headers))
-                          :body (.getResponseText xhr)}
-                         (process-create-resp)
-                         (async/put! ch))
-                (catch :default e (async/put! ch e)))
+                (->> {:opts {:url (str (:href form))}
+                      :status (.getStatus xhr)
+                      :headers (-> (js->clj (.getResponseHeaders xhr))
+                                   (util/keyword-headers))
+                      :body (.getResponseText xhr)}
+                     (process-create-resp)
+                     (async/put! ch))
+                (catch js/Error e (async/put! ch e)))
               (async/close! ch)))
           (.send xhr (:href form) "POST" (util/write-transit args)
                  #js {"Accept" "application/transit+json"
@@ -266,8 +266,8 @@
            (error-ex-data opts error)))
 
 (defn- update-status-ex-info [opts status body]
-  (ex-info (str "Non-no-content status " status " while updating the resource "
-                "at " (:url opts))
+  (ex-info (str "Non 204 (No Content) status " status " while updating the "
+                "resource at " (:url opts))
            (status-ex-data opts status body)))
 
 (defn- process-update-resp [{:keys [opts error status headers] :as resp} rep]
@@ -275,7 +275,13 @@
     (throw (update-error-ex-info opts error)))
   (when (not= 204 status)
     (throw (update-status-ex-info opts status (:body (parse-response resp)))))
-  (with-meta rep (clojure.core/update (meta rep) :etag (:etag headers))))
+  (with-meta rep (assoc (meta rep) :etag (:etag headers))))
+
+(defn- remove-controls [representation]
+  (dissoc representation :links :queries :forms :embedded :ops))
+
+(defn- remove-embedded [representation]
+  (dissoc representation :embedded))
 
 (defn update
   "Updates the resource to reflect the state of the given representation using
@@ -287,7 +293,7 @@
 
   Uses the ETag from representation for the conditional update if the
   representation contains one."
-  ([resource representation] (create resource representation {}))
+  ([resource representation] (update resource representation {}))
   ([resource representation opts]
    (let [ch (async/chan)]
      #?(:clj
@@ -298,7 +304,9 @@
              :headers {"Accept" "application/transit+json"
                        "Content-Type" "application/transit+json"
                        "If-Match" (if-match representation)}
-             :body (write-transit representation)
+             :body (write-transit (-> representation
+                                      remove-controls
+                                      remove-embedded))
              :follow-redirects false}
             opts)
           (fn [resp]
@@ -306,6 +314,27 @@
               (async/put! ch (process-update-resp resp representation))
               (catch Throwable t (async/put! ch t)))
             (async/close! ch))))
+     #?(:cljs
+        (let [xhr (XhrIo.)]
+          (events/listen
+            xhr EventType.COMPLETE
+            (fn [_]
+              (try
+                (let [resp {:opts {:url (str resource)}
+                            :status (.getStatus xhr)
+                            :headers (-> (js->clj (.getResponseHeaders xhr))
+                                         (util/keyword-headers))
+                            :body (.getResponseText xhr)}]
+                  (async/put! ch (process-update-resp resp representation)))
+                (catch js/Error e (async/put! ch e)))
+              (async/close! ch)))
+          (.send xhr (str resource) "PUT"
+                 (util/write-transit (-> representation
+                                         remove-controls
+                                         remove-embedded))
+                 #js {"Accept" "application/transit+json"
+                      "Content-Type" "application/transit+json"
+                      "If-Match" (if-match representation)})))
      ch)))
 
 ;; ---- Delete ----------------------------------------------------------------
@@ -315,8 +344,8 @@
            (error-ex-data opts error)))
 
 (defn- delete-status-ex-info [opts status body]
-  (ex-info (str "Non-no-content status " status " while deleting the resource "
-                "at " (:url opts))
+  (ex-info (str "Non 204 (No Content) status " status " while deleting the "
+                "resource at " (:url opts))
            (status-ex-data opts status body)))
 
 (defn- process-delete-resp [{:keys [opts error status] :as resp}]
@@ -363,7 +392,7 @@
                           :body (.getResponseText xhr)}
                          (process-delete-resp)
                          (async/put! ch))
-                (catch :default e (async/put! ch e)))
+                (catch js/Error e (async/put! ch e)))
               (async/close! ch)))
           (.send xhr resource "DELETE" nil
                  #js {"Accept" "application/transit+json"})))
