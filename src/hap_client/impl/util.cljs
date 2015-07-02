@@ -10,8 +10,14 @@
 (defn keyword-headers [headers]
   (map-keys keyword-header headers))
 
-(defn write-transit [x]
-  (transit/write (transit/writer :json {:handlers st/write-handlers}) x))
+(defn write-transit [val]
+  (let [opts {:handlers st/write-handlers}
+        writer (transit/writer :json opts)]
+    (try
+      (transit/write writer val)
+      (catch js/Error e
+        (throw (ex-info "Error while writing Transit"
+                        {:val val :opts opts} e))))))
 
 (defn- set-parameter-value! [uri k v]
   (.setParameterValue uri (name k) (write-transit v)))
