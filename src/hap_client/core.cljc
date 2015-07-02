@@ -61,6 +61,7 @@
     form))
 
 (defn- parse-body [opts format body]
+  {:pre [(:url opts) format body] :post [%]}
   (->> (read-transit body format)
        (uri/resolve-all (uri/create (:url opts)))
        (postwalk create-resources)))
