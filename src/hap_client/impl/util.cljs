@@ -2,7 +2,7 @@
   (:require [plumbing.core :refer [map-keys]]
             [clojure.string :as str]
             [cognitect.transit :as transit]
-            [outpace.schema-transit :as st]))
+            [transit-schema.core :as ts]))
 
 (defn keyword-header [header]
   (keyword (str/lower-case header)))
@@ -11,7 +11,7 @@
   (map-keys keyword-header headers))
 
 (defn write-transit [val]
-  (let [opts {:handlers st/write-handlers}
+  (let [opts {:handlers ts/write-handlers}
         writer (transit/writer :json opts)]
     (try
       (transit/write writer val)

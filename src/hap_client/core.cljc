@@ -13,7 +13,7 @@
                [hap-client.impl.walk :refer [postwalk]]])
               [cognitect.transit :as transit]
               [hap-client.impl.uri :as uri]
-              [outpace.schema-transit :as st])
+              [transit-schema.core :as ts])
   #?(:clj
      (:import [java.io ByteArrayOutputStream]))
   #?(:cljs
@@ -32,7 +32,7 @@
 
 (def ^:private read-opts
   {:handlers
-   (assoc st/read-handlers "r" (transit/read-handler uri/create))})
+   (assoc ts/read-handlers "r" (transit/read-handler uri/create))})
 
 (defn- read-transit [in format]
   #?(:clj (transit/read (transit/reader in format read-opts)))
@@ -41,13 +41,13 @@
 (defn- write-transit [o]
   #?(:clj
      (let [out (ByteArrayOutputStream.)]
-       (transit/write (transit/writer out :json {:handlers st/write-handlers}) o)
+       (transit/write (transit/writer out :json {:handlers ts/write-handlers}) o)
        (io/input-stream (.toByteArray out)))))
 
 (defn- transit-write-str [o]
   #?(:clj
      (let [out (ByteArrayOutputStream.)]
-       (transit/write (transit/writer out :json {:handlers st/write-handlers}) o)
+       (transit/write (transit/writer out :json {:handlers ts/write-handlers}) o)
        (String. (.toByteArray out)))))
 
 (defn- create-resource [form]
