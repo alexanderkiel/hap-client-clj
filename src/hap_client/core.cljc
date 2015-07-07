@@ -60,9 +60,13 @@
     (clojure.core/update form :links #(postwalk create-resource %))
     form))
 
+(defn ensure-ops-set [doc]
+  (if (set? (:ops doc)) doc (clojure.core/update doc :ops set)))
+
 (defn- parse-body [opts format body]
   {:pre [(:url opts) format body] :post [%]}
   (->> (read-transit body format)
+       (ensure-ops-set)
        (uri/resolve-all (uri/create (:url opts)))
        (postwalk create-resources)))
 
