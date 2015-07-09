@@ -50,16 +50,6 @@
        (transit/write (transit/writer out :json {:handlers ts/write-handlers}) o)
        (String. (.toByteArray out)))))
 
-(defn- create-resource [form]
-  (if-let [href (:href form)]
-    (resource href)
-    form))
-
-(defn- create-resources [form]
-  (if (:links form)
-    (clojure.core/update form :links #(postwalk create-resource %))
-    form))
-
 (defn ensure-ops-set [doc]
   (if (set? (:ops doc)) doc (clojure.core/update doc :ops set)))
 
@@ -67,8 +57,7 @@
   {:pre [(:url opts) format body] :post [%]}
   (->> (read-transit body format)
        (ensure-ops-set)
-       (uri/resolve-all (uri/create (:url opts)))
-       (postwalk create-resources)))
+       (uri/resolve-all (uri/create (:url opts)))))
 
 (defn- content-type-ex-info [opts content-type status]
   (ex-info (str (if content-type "Invalid" "Missing") " Content-Type "
@@ -114,10 +103,6 @@
 
   Opts can be a map of custom :headers to support authentication an other
   things.
-
-  Links in representations are already replaced by there client-side
-  representation of the remote resource the link to. So it's possible to fetch
-  a link directly.
 
   Puts an ExceptionInfo onto the channel if there is any problem including non
   200 (Ok) responses. The exception data of non 200 responses contains :status
