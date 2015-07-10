@@ -221,7 +221,8 @@
              :headers {"Accept" "application/transit+json"
                        "Content-Type" "application/transit+json"}
              :body (write-transit args)
-             :follow-redirects false}
+             :follow-redirects false
+             :as :stream}
             opts)
           (fn [resp]
             (try
@@ -299,7 +300,8 @@
              :body (write-transit (-> representation
                                       remove-controls
                                       remove-embedded))
-             :follow-redirects false}
+             :follow-redirects false
+             :as :stream}
             opts)
           (fn [resp]
             (try
@@ -364,7 +366,8 @@
           (merge
             {:method :delete
              :url (str resource)
-             :follow-redirects false}
+             :follow-redirects false
+             :as :stream}
             opts)
           (fn [resp]
             (try
