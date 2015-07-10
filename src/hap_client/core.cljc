@@ -23,9 +23,12 @@
 #?(:clj (set! *warn-on-reflection* true))
 
 (defn resource
-  "Creates a client-side representation of the remote resource at uri."
-  [uri]
-  uri)
+  "Creates a client-side representation of the remote resource from a link or a
+  uri."
+  [link-or-uri]
+  (if-let [uri (:href link-or-uri)]
+    uri
+    link-or-uri))
 
 (def ^:private media-types {"application/transit+json" :json
                             "application/transit+msgpack" :msgpack})
