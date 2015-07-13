@@ -12,23 +12,69 @@
                [hap-client.impl.util :as util]
                [hap-client.impl.walk :refer [postwalk]]])
               [cognitect.transit :as transit]
+              [schema.core :as s]
               [hap-client.impl.uri :as uri]
               [transit-schema.core :as ts])
   #?(:clj
-     (:import [java.io ByteArrayOutputStream]))
+     (:import [java.io ByteArrayOutputStream]
+              [java.net URI]))
   #?(:cljs
-     (:import [goog.net XhrIo EventType]))
+     (:import [goog.net XhrIo EventType]
+       [goog Uri]))
   (:refer-clojure :exclude [update]))
 
 #?(:clj (set! *warn-on-reflection* true))
 
-(defn resource
-  "Creates a client-side representation of the remote resource from a link or a
-  uri."
-  [link-or-uri]
-  (if-let [uri (:href link-or-uri)]
-    uri
-    link-or-uri))
+;; ---- Schemas ---------------------------------------------------------------
+
+(def Uri
+  #?(:clj URI)
+  #?(:cljs Uri))
+
+(def Link
+  {:href Uri})
+
+(def Query
+  {:href Uri})
+
+(def Args
+  "A map of query/form param keyword to value."
+  {s/Keyword s/Any})
+
+(def Form
+  {:href Uri})
+
+(def Resource
+  "Client side representation of a remote resource."
+  (s/either Uri Link))
+
+(def Links
+  {s/Keyword (s/either Link [Link])})
+
+(def Queries
+  {s/Keyword Query})
+
+(def Forms
+  {s/Keyword Form})
+
+(def Operations
+  #{(s/enum :update :delete)})
+
+(declare Representation)
+
+(def Embedded
+  {s/Keyword (s/either (s/recursive #'Representation)
+                       [(s/recursive #'Representation)])})
+
+(def Representation
+  {(s/optional-key :data) s/Any
+   (s/optional-key :links) Links
+   (s/optional-key :queries) Queries
+   (s/optional-key :forms) Forms
+   (s/optional-key :embedded) Embedded
+   (s/optional-key :ops) Operations})
+
+;; ---- Private ---------------------------------------------------------------
 
 (def ^:private media-types {"application/transit+json" :json
                             "application/transit+msgpack" :msgpack})
@@ -53,7 +99,7 @@
        (transit/write (transit/writer out :json {:handlers ts/write-handlers}) o)
        (String. (.toByteArray out)))))
 
-(defn ensure-ops-set [doc]
+(defn- ensure-ops-set [doc]
   (if (set? (:ops doc)) doc (clojure.core/update doc :ops set)))
 
 (defn- parse-body [opts format body]
@@ -100,7 +146,12 @@
       200 (with-meta (:body resp) (select-keys (:headers resp) [:etag]))
       (throw (fetch-status-ex-info opts status (:body resp))))))
 
-(defn fetch
+(defn- extract-uri [resource]
+  (if-let [uri (:href resource)]
+    uri
+    resource))
+
+(s/defn fetch
   "Returns a channel conveying the current representation of the remote
   resource.
 
@@ -110,14 +161,15 @@
   Puts an ExceptionInfo onto the channel if there is any problem including non
   200 (Ok) responses. The exception data of non 200 responses contains :status
   and :body."
-  ([resource] (fetch resource {}))
-  ([resource opts]
-   (let [ch (async/chan)]
+  ([resource :- Resource] (fetch resource {}))
+  ([resource :- Resource opts]
+   (let [uri (extract-uri resource)
+         ch (async/chan)]
      #?(:clj
         (http/request
           (merge
             {:method :get
-             :url (str resource)
+             :url (str uri)
              :headers {"Accept" "application/transit+json"}
              :as :stream}
             opts)
@@ -132,7 +184,7 @@
             xhr EventType.COMPLETE
             (fn [_]
               (try
-                (some->> {:opts {:url (str resource)}
+                (some->> {:opts {:url (str uri)}
                           :status (.getStatus xhr)
                           :headers (-> (js->clj (.getResponseHeaders xhr))
                                        (util/keyword-headers))
@@ -141,24 +193,22 @@
                          (async/put! ch))
                 (catch js/Error e (async/put! ch e)))
               (async/close! ch)))
-          (.send xhr (str resource) "GET" nil
+          (.send xhr uri "GET" nil
                  #js {"Accept" "application/transit+json"})))
      ch)))
 
 ;; ---- Query -----------------------------------------------------------------
 
-(defn execute
+(s/defn execute
   "Executes the query using args and optional opts.
-
-  Args is a map of query param name to value.
 
   Returns a channel conveying the result of the query.
 
   Puts an ExceptionInfo onto the channel if there is any problem including non
   200 (Ok) responses. The exception data of non 200 responses contains :status
   and :body."
-  ([query args] (execute query args {}))
-  ([query args opts]
+  ([query :- Query args :- Args] (execute query args {}))
+  ([query :- Query args :- Args opts]
     #?(:clj
        (let [ch (async/chan)]
          (http/request
@@ -175,7 +225,7 @@
                (catch Throwable t (async/put! ch t)))
              (async/close! ch))) ch))
     #?(:cljs
-       (fetch (resource (util/set-query! (:href query) args)) opts))))
+       (fetch (util/set-query! (:href query) args) opts))))
 
 ;; ---- Create ----------------------------------------------------------------
 
@@ -199,10 +249,10 @@
   (when (not= 201 status)
     (throw (create-status-ex-info opts status (:body (parse-response resp)))))
   (if-let [location (:location headers)]
-    (resource (uri/resolve (uri/create (:url opts)) (uri/create location)))
+    (uri/resolve (uri/create (:url opts)) (uri/create location))
     (throw (missing-location-ex-info opts))))
 
-(defn create
+(s/defn create
   "Creates a resource as described by the form using args and optional opts.
 
   Opts can be a map of custom :headers to support authentication an other
@@ -210,8 +260,8 @@
 
   Returns a channel conveying the client-side representation of the resource
   created."
-  ([form args] (create form args {}))
-  ([form args opts]
+  ([form :- Form args :- Args] (create form args {}))
+  ([form :- Form args :- Args opts]
    (let [ch (async/chan)]
      #?(:clj
         (http/request
@@ -276,7 +326,7 @@
 (defn- remove-embedded [representation]
   (dissoc representation :embedded))
 
-(defn update
+(s/defn update
   "Updates the resource to reflect the state of the given representation using
   optional opts and returns a channel which conveys the given representation
   with the new ETag after the resource was updated.
@@ -286,14 +336,16 @@
 
   Uses the ETag from representation for the conditional update if the
   representation contains one."
-  ([resource representation] (update resource representation {}))
-  ([resource representation opts]
-   (let [ch (async/chan)]
+  ([resource :- Resource representation :- Representation]
+    (update resource representation {}))
+  ([resource :- Resource representation :- Representation opts]
+   (let [uri (extract-uri resource)
+         ch (async/chan)]
      #?(:clj
         (http/request
           (merge
             {:method :put
-             :url (str resource)
+             :url (str uri)
              :headers {"Accept" "application/transit+json"
                        "Content-Type" "application/transit+json"
                        "If-Match" (if-match representation)}
@@ -314,7 +366,7 @@
             xhr EventType.COMPLETE
             (fn [_]
               (try
-                (let [resp {:opts {:url (str resource)}
+                (let [resp {:opts {:url (str uri)}
                             :status (.getStatus xhr)
                             :headers (-> (js->clj (.getResponseHeaders xhr))
                                          (util/keyword-headers))
@@ -322,7 +374,7 @@
                   (async/put! ch (process-update-resp resp representation)))
                 (catch js/Error e (async/put! ch e)))
               (async/close! ch)))
-          (.send xhr (str resource) "PUT"
+          (.send xhr uri "PUT"
                  (util/write-transit (-> representation
                                          remove-controls
                                          remove-embedded))
@@ -348,7 +400,7 @@
   (when (not= 204 status)
     (throw (delete-status-ex-info opts status (:body (parse-response resp))))))
 
-(defn delete
+(s/defn delete
   "Deletes the resource using optional opts and returns a channel which closes
   after the resource was deleted.
 
@@ -358,14 +410,15 @@
   Puts an ExceptionInfo onto the channel if there is any problem including non
   200 (Ok) responses. The exception data of non 200 responses contains :status
   and :body."
-  ([resource] (delete resource {}))
-  ([resource opts]
-   (let [ch (async/chan)]
+  ([resource :- Resource] (delete resource {}))
+  ([resource :- Resource opts]
+   (let [uri (extract-uri resource)
+         ch (async/chan)]
      #?(:clj
         (http/request
           (merge
             {:method :delete
-             :url (str resource)
+             :url (str uri)
              :follow-redirects false
              :as :stream}
             opts)
@@ -380,7 +433,7 @@
             xhr EventType.COMPLETE
             (fn [_]
               (try
-                (some->> {:opts {:url (str resource)}
+                (some->> {:opts {:url (str uri)}
                           :status (.getStatus xhr)
                           :headers (-> (js->clj (.getResponseHeaders xhr))
                                        (util/keyword-headers))
@@ -389,6 +442,6 @@
                          (async/put! ch))
                 (catch js/Error e (async/put! ch e)))
               (async/close! ch)))
-          (.send xhr resource "DELETE" nil
+          (.send xhr uri "DELETE" nil
                  #js {"Accept" "application/transit+json"})))
      ch)))

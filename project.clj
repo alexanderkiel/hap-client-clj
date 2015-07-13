@@ -1,4 +1,5 @@
-(defproject org.clojars.akiel/hap-client-clj "0.1-SNAPSHOT"
+(defproject
+  org.clojars.akiel/hap-client-clj "0.1-SNAPSHOT"
   :description "A Clojure HAP client library."
   :url "https://github.com/alexanderkiel/hap-client-clj"
 
@@ -12,4 +13,6 @@
                  [http-kit "2.1.18"]
                  [com.cognitect/transit-clj "0.8.271"]
                  [com.cognitect/transit-cljs "0.8.220"]
-                 [org.clojars.akiel/transit-schema "0.1-SNAPSHOT"]])
+                 [org.clojars.akiel/transit-schema "0.1-SNAPSHOT"]]
+
+  :profiles {:dev {:dependencies [[http-kit.fake "0.2.1"]]}})
