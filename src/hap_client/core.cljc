@@ -48,6 +48,15 @@
   "Client side representation of a remote resource."
   (s/either Uri Link))
 
+(def CustomRequestHeaders
+  "Custom request headers."
+  {s/Str s/Str})
+
+(def Opts
+  "Request options to support authentication and other things through custom
+  request headers."
+  {(s/optional-key :headers) CustomRequestHeaders})
+
 (def Links
   {s/Keyword (s/either Link [Link])})
 
@@ -155,14 +164,11 @@
   "Returns a channel conveying the current representation of the remote
   resource.
 
-  Opts can be a map of custom :headers to support authentication an other
-  things.
-
   Puts an ExceptionInfo onto the channel if there is any problem including non
   200 (Ok) responses. The exception data of non 200 responses contains :status
   and :body."
   ([resource :- Resource] (fetch resource {}))
-  ([resource :- Resource opts]
+  ([resource :- Resource opts :- Opts]
    (let [uri (extract-uri resource)
          ch (async/chan)]
      #?(:clj
@@ -255,13 +261,10 @@
 (s/defn create
   "Creates a resource as described by the form using args and optional opts.
 
-  Opts can be a map of custom :headers to support authentication an other
-  things.
-
   Returns a channel conveying the client-side representation of the resource
   created."
   ([form :- Form args :- Args] (create form args {}))
-  ([form :- Form args :- Args opts]
+  ([form :- Form args :- Args opts :- Opts]
    (let [ch (async/chan)]
      #?(:clj
         (http/request
@@ -331,14 +334,11 @@
   optional opts and returns a channel which conveys the given representation
   with the new ETag after the resource was updated.
 
-  Opts can be a map of custom :headers to support authentication an other
-  things.
-
   Uses the ETag from representation for the conditional update if the
   representation contains one."
   ([resource :- Resource representation :- Representation]
     (update resource representation {}))
-  ([resource :- Resource representation :- Representation opts]
+  ([resource :- Resource representation :- Representation opts :- Opts]
    (let [uri (extract-uri resource)
          ch (async/chan)]
      #?(:clj
@@ -404,14 +404,11 @@
   "Deletes the resource using optional opts and returns a channel which closes
   after the resource was deleted.
 
-  Opts can be a map of custom :headers to support authentication an other
-  things.
-
   Puts an ExceptionInfo onto the channel if there is any problem including non
   200 (Ok) responses. The exception data of non 200 responses contains :status
   and :body."
   ([resource :- Resource] (delete resource {}))
-  ([resource :- Resource opts]
+  ([resource :- Resource opts :- Opts]
    (let [uri (extract-uri resource)
          ch (async/chan)]
      #?(:clj
