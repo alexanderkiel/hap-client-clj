@@ -28,6 +28,14 @@
         (is (= 404 (:status (ex-data resp))))
         (is (:body (ex-data resp))))))
 
+  (testing "Accepts strings as resource"
+    (with-fake-http ["uri-123306"
+                     {:status 200
+                      :headers {:content-type "application/transit+json"}
+                      :body (#'hap-client.core/write-transit {})}]
+      (let [resp (<!! (fetch "uri-123306"))]
+        (is (map? resp)))))
+
   (testing "Accepts links as resource"
     (with-fake-http ["uri-125417"
                      {:status 200

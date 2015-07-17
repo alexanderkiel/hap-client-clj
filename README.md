@@ -21,7 +21,7 @@ To install, just add the following to your project dependencies:
 
 ```clojure
 (require '[hap-client.core :as hap])
-(hap/fetch (hap/resource "http://localhost:8080"))
+(hap/fetch "http://localhost:8080")
 ```
 
 ### Create a new Resource
@@ -33,7 +33,7 @@ To install, just add the following to your project dependencies:
 
 (go
   (try
-    (let [root (<? (hap/fetch (hap/resource "http://localhost:8080")))
+    (let [root (<? (hap/fetch "http://localhost:8080"))
           form (:my-form (:forms root))]
       (<? (hap/create form {:name "value"})))
   (catch Throwable t t)))

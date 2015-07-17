@@ -12,7 +12,7 @@
                [hap-client.impl.util :as util]
                [hap-client.impl.walk :refer [postwalk]]])
               [cognitect.transit :as transit]
-              [schema.core :as s]
+              [schema.core :as s :refer [Str]]
               [hap-client.impl.uri :as uri]
               [transit-schema.core :as ts])
   #?(:clj
@@ -46,11 +46,11 @@
 
 (def Resource
   "Client side representation of a remote resource."
-  (s/either Uri Link))
+  (s/either Uri Str Link))
 
 (def CustomRequestHeaders
   "Custom request headers."
-  {s/Str s/Str})
+  {Str Str})
 
 (def Opts
   "Request options to support authentication and other things through custom
