@@ -229,7 +229,8 @@
              (try
                (some->> (process-fetch-resp resp) (async/put! ch))
                (catch Throwable t (async/put! ch t)))
-             (async/close! ch))) ch))
+             (async/close! ch)))
+         ch))
     #?(:cljs
        (fetch (util/set-query! (:href query) args) opts))))
 
