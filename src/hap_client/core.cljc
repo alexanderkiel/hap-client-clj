@@ -1,6 +1,4 @@
 (ns hap-client.core
-  #?(:clj
-     (:use plumbing.core))
   (:require
     #?@(:clj [[clojure.core.async :as async]
               [clojure.java.io :as io]
@@ -12,6 +10,7 @@
                [hap-client.impl.util :as util]
                [hap-client.impl.walk :refer [postwalk]]])
               [cognitect.transit :as transit]
+              [plumbing.core :refer [assoc-when map-vals]]
               [schema.core :as s :refer [Str]]
               [hap-client.impl.uri :as uri]
               [transit-schema.core :as ts])
@@ -147,13 +146,13 @@
                 (:url opts))
            (status-ex-data opts status body)))
 
-(defn- process-fetch-resp [{:keys [opts error status] :as resp}]
+(defn- process-fetch-resp [{:keys [opts error status headers] :as resp}]
   (when error
     (throw (fetch-error-ex-info opts error)))
-  (let [resp (parse-response resp)]
+  (let [{:keys [body]} (parse-response resp)]
     (condp = status
-      200 (with-meta (:body resp) (select-keys (:headers resp) [:etag]))
-      (throw (fetch-status-ex-info opts status (:body resp))))))
+      200 (assoc-when body :etag (:etag headers))
+      (throw (fetch-status-ex-info opts status body)))))
 
 (defn- extract-uri [resource]
   (if-let [uri (:href resource)]
@@ -306,7 +305,7 @@
 ;; ---- Update ----------------------------------------------------------------
 
 (defn- if-match [rep]
-  (if-let [etag (:etag (meta rep))] etag "*"))
+  (or (:etag rep) "*"))
 
 (defn- update-error-ex-info [opts error]
   (ex-info (str "Error while updating the resource at " (:url opts))
@@ -322,7 +321,7 @@
     (throw (update-error-ex-info opts error)))
   (when (not= 204 status)
     (throw (update-status-ex-info opts status (:body (parse-response resp)))))
-  (with-meta rep (assoc (meta rep) :etag (:etag headers))))
+  (assoc-when rep :etag (:etag headers)))
 
 (defn- remove-controls [representation]
   (dissoc representation :links :queries :forms :embedded :ops))
