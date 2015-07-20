@@ -91,8 +91,11 @@
   {:handlers
    (assoc ts/read-handlers "r" (transit/read-handler uri/create))})
 
+(def ^:private reader-factory
+  (transit/reader-factory read-opts))
+
 (defn- read-transit [in format]
-  #?(:clj (transit/read (transit/reader in format read-opts)))
+  #?(:clj (transit/read (transit/reader reader-factory format in)))
   #?(:cljs (transit/read (transit/reader format read-opts) in)))
 
 (defn- write-transit [o]
