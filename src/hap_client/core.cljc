@@ -87,9 +87,12 @@
 (def ^:private media-types {"application/transit+json" :json
                             "application/transit+msgpack" :msgpack})
 
+(def ^:dynamic *base-uri* nil)
+
 (def ^:private read-opts
   {:handlers
-   (assoc ts/read-handlers "r" (transit/read-handler uri/create))})
+   (assoc ts/read-handlers
+     "r" (transit/read-handler #(uri/resolve *base-uri* %)))})
 
 (defn- read-transit [in format]
   #?(:clj (transit/read (transit/reader in format read-opts)))
@@ -112,9 +115,9 @@
 
 (defn- parse-body [opts format body]
   {:pre [(:url opts) format body] :post [%]}
-  (->> (read-transit body format)
-       (ensure-ops-set)
-       (uri/resolve-all (uri/create (:url opts)))))
+  (binding [*base-uri* (uri/create (:url opts))]
+    (->> (read-transit body format)
+         (ensure-ops-set))))
 
 (defn- content-type-ex-info [opts content-type status]
   (ex-info (str (if content-type "Invalid" "Missing") " Content-Type "
@@ -255,7 +258,7 @@
   (when (not= 201 status)
     (throw (create-status-ex-info opts status (:body (parse-response resp)))))
   (if-let [location (:location headers)]
-    (uri/resolve (uri/create (:url opts)) (uri/create location))
+    (uri/resolve (uri/create (:url opts)) location)
     (throw (missing-location-ex-info opts))))
 
 (s/defn create
