@@ -91,8 +91,9 @@
 
 (def ^:private read-opts
   {:handlers
-   (assoc ts/read-handlers
-     "r" (transit/read-handler #(uri/resolve *base-uri* %)))})
+   (transit/read-handlers
+     (assoc ts/read-handlers
+       "r" (transit/read-handler #(uri/resolve *base-uri* %))))})
 
 (defn- read-transit [in format]
   #?(:clj (transit/read (transit/reader in format read-opts)))

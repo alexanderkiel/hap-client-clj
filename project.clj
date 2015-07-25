@@ -11,7 +11,7 @@
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [prismatic/plumbing "0.4.3"]
                  [http-kit "2.1.18"]
-                 [com.cognitect/transit-clj "0.8.275"]
+                 [com.cognitect/transit-clj "dev"]
                  [com.cognitect/transit-cljs "0.8.220"]
                  [org.clojars.akiel/transit-schema "0.1-SNAPSHOT"]]
 
