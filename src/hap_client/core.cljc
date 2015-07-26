@@ -87,12 +87,15 @@
 (def ^:private media-types {"application/transit+json" :json
                             "application/transit+msgpack" :msgpack})
 
-(def ^:dynamic *base-uri* nil)
+(def ^:private ^:dynamic *base-uri* nil)
+
+(defn- resolve-uri [uri]
+  (uri/resolve *base-uri* uri))
 
 (def ^:private read-opts
   {:handlers
    (assoc ts/read-handlers
-     "r" (transit/read-handler #(uri/resolve *base-uri* %)))})
+     "r" (transit/read-handler resolve-uri))})
 
 (defn- read-transit [in format]
   #?(:clj (transit/read (transit/reader in format read-opts)))
@@ -114,10 +117,9 @@
   (if (set? (:ops doc)) doc (clojure.core/update doc :ops set)))
 
 (defn- parse-body [opts format body]
-  {:pre [(:url opts) format body] :post [%]}
-  (binding [*base-uri* (uri/create (:url opts))]
-    (->> (read-transit body format)
-         (ensure-ops-set))))
+  (->> (binding [*base-uri* (uri/create (:url opts))]
+         (read-transit body format))
+       (ensure-ops-set)))
 
 (defn- content-type-ex-info [opts content-type status]
   (ex-info (str (if content-type "Invalid" "Missing") " Content-Type "
