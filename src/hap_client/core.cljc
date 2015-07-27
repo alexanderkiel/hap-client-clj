@@ -7,9 +7,8 @@
     #?@(:cljs [[plumbing.core :refer [map-vals]]
                [cljs.core.async :as async]
                [goog.events :as events]
-               [hap-client.impl.util :as util]
-               [hap-client.impl.walk :refer [postwalk]]])
-              [cognitect.transit :as transit]
+               [hap-client.impl.util :as util]])
+    [cognitect.transit :as transit]
               [plumbing.core :refer [assoc-when map-vals]]
               [schema.core :as s :refer [Str]]
               [hap-client.impl.uri :as uri]

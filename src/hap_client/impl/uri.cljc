@@ -1,9 +1,5 @@
 (ns hap-client.impl.uri
   #?(:clj
-     (:require [clojure.walk :refer [postwalk]]))
-  #?(:cljs
-     (:require [hap-client.impl.walk :refer [postwalk]]))
-  #?(:clj
      (:import [java.net URI]))
   #?(:cljs
      (:import [goog Uri]))
