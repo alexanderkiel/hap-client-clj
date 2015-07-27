@@ -2,6 +2,7 @@
   (:require
     #?@(:clj [[clojure.core.async :as async]
               [clojure.java.io :as io]
+              [clojure.tools.logging :refer [debug]]
               [org.httpkit.client :as http]])
     #?@(:cljs [[plumbing.core :refer [map-vals]]
                [cljs.core.async :as async]
@@ -176,6 +177,7 @@
   ([resource :- Resource opts :- Opts]
     (let [uri (extract-uri resource)
           ch (async/chan)]
+      #?(:clj (debug "Fetch" (str uri)))
       #?(:clj
          (http/request
            (merge-with merge

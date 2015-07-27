@@ -8,6 +8,7 @@
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "0.0-3211"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
+                 [org.clojure/tools.logging "0.3.1"]
                  [prismatic/plumbing "0.4.3"]
                  [http-kit "2.1.18"]
                  [com.cognitect/transit-clj "0.8.275"]
