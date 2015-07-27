@@ -42,6 +42,22 @@
                       :headers {:content-type "application/transit+json"}
                       :body (#'hap-client.core/write-transit {})}]
       (let [resp (<!! (fetch {:href (URI/create "uri-125417")}))]
+        (is (map? resp)))))
+
+  (testing "Uses application/transit+json as default Accept header"
+    (with-fake-http [{:headers {"Accept" "application/transit+json"}}
+                     {:status 200
+                      :headers {:content-type "application/transit+json"}
+                      :body (#'hap-client.core/write-transit {})}]
+      (let [resp (<!! (fetch "uri"))]
+        (is (map? resp)))))
+
+  (testing "Merging opts leaves default headers alone"
+    (with-fake-http [{:headers {"Accept" "application/transit+json"}}
+                     {:status 200
+                      :headers {:content-type "application/transit+json"}
+                      :body (#'hap-client.core/write-transit {})}]
+      (let [resp (<!! (fetch "uri" {:headers {}}))]
         (is (map? resp))))))
 
 (deftest execute-test

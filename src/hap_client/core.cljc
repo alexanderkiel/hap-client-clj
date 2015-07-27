@@ -179,7 +179,7 @@
           ch (async/chan)]
       #?(:clj
          (http/request
-           (merge
+           (merge-with merge
              {:method :get
               :url (str uri)
               :headers {"Accept" "application/transit+json"}
@@ -224,7 +224,7 @@
     #?(:clj
        (let [ch (async/chan)]
          (http/request
-           (merge
+           (merge-with merge
              {:method :get
               :url (str (:href query))
               :headers {"Accept" "application/transit+json"}
@@ -275,7 +275,7 @@
     (let [ch (async/chan)]
       #?(:clj
          (http/request
-           (merge
+           (merge-with merge
              {:method :post
               :url (str (:href form))
               :headers {"Accept" "application/transit+json"
@@ -350,7 +350,7 @@
           ch (async/chan)]
       #?(:clj
          (http/request
-           (merge
+           (merge-with merge
              {:method :put
               :url (str uri)
               :headers {"Accept" "application/transit+json"
@@ -420,7 +420,7 @@
           ch (async/chan)]
       #?(:clj
          (http/request
-           (merge
+           (merge-with merge
              {:method :delete
               :url (str uri)
               :follow-redirects false
