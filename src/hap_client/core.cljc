@@ -2,7 +2,6 @@
   (:require
     #?@(:clj [[clojure.core.async :as async]
               [clojure.java.io :as io]
-              [clojure.walk :refer [postwalk]]
               [org.httpkit.client :as http]])
     #?@(:cljs [[plumbing.core :refer [map-vals]]
                [cljs.core.async :as async]
