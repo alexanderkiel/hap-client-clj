@@ -8,7 +8,7 @@
                [cljs.core.async :as async]
                [goog.events :as events]
                [hap-client.impl.util :as util]])
-    [cognitect.transit :as transit]
+              [cognitect.transit :as transit]
               [plumbing.core :refer [assoc-when map-vals]]
               [schema.core :as s :refer [Str]]
               [hap-client.impl.uri :as uri]
@@ -121,8 +121,11 @@
        (ensure-ops-set)))
 
 (defn- content-type-ex-info [opts content-type status]
-  (ex-info (str (if content-type "Invalid" "Missing") " Content-Type "
-                content-type " while fetching " (:url opts))
+  (ex-info (str
+             (if content-type
+               (str "Invalid Content-Type " content-type " ")
+               (str "Missing Content-Type "))
+             "while fetching " (:url opts))
            {:content-type content-type
             :uri (uri/create (:url opts))
             :status status}))
@@ -172,39 +175,39 @@
   and :body."
   ([resource :- Resource] (fetch resource {}))
   ([resource :- Resource opts :- Opts]
-   (let [uri (extract-uri resource)
-         ch (async/chan)]
-     #?(:clj
-        (http/request
-          (merge
-            {:method :get
-             :url (str uri)
-             :headers {"Accept" "application/transit+json"}
-             :as :stream}
-            opts)
-          (fn [resp]
-            (try
-              (some->> (process-fetch-resp resp) (async/put! ch))
-              (catch Throwable t (async/put! ch t)))
-            (async/close! ch))))
-     #?(:cljs
-        (let [xhr (XhrIo.)]
-          (events/listen
-            xhr EventType.COMPLETE
-            (fn [_]
-              (try
-                (some->> {:opts {:url (str uri)}
-                          :status (.getStatus xhr)
-                          :headers (-> (js->clj (.getResponseHeaders xhr))
-                                       (util/keyword-headers))
-                          :body (.getResponseText xhr)}
-                         (process-fetch-resp)
-                         (async/put! ch))
-                (catch js/Error e (async/put! ch e)))
-              (async/close! ch)))
-          (.send xhr uri "GET" nil
-                 #js {"Accept" "application/transit+json"})))
-     ch)))
+    (let [uri (extract-uri resource)
+          ch (async/chan)]
+      #?(:clj
+         (http/request
+           (merge
+             {:method :get
+              :url (str uri)
+              :headers {"Accept" "application/transit+json"}
+              :as :stream}
+             opts)
+           (fn [resp]
+             (try
+               (some->> (process-fetch-resp resp) (async/put! ch))
+               (catch Throwable t (async/put! ch t)))
+             (async/close! ch))))
+      #?(:cljs
+         (let [xhr (XhrIo.)]
+           (events/listen
+             xhr EventType.COMPLETE
+             (fn [_]
+               (try
+                 (some->> {:opts {:url (str uri)}
+                           :status (.getStatus xhr)
+                           :headers (-> (js->clj (.getResponseHeaders xhr))
+                                        (util/keyword-headers))
+                           :body (.getResponseText xhr)}
+                          (process-fetch-resp)
+                          (async/put! ch))
+                 (catch js/Error e (async/put! ch e)))
+               (async/close! ch)))
+           (.send xhr uri "GET" nil
+                  #js {"Accept" "application/transit+json"})))
+      ch)))
 
 ;; ---- Query -----------------------------------------------------------------
 
@@ -269,42 +272,42 @@
   created."
   ([form :- Form args :- Args] (create form args {}))
   ([form :- Form args :- Args opts :- Opts]
-   (let [ch (async/chan)]
-     #?(:clj
-        (http/request
-          (merge
-            {:method :post
-             :url (str (:href form))
-             :headers {"Accept" "application/transit+json"
-                       "Content-Type" "application/transit+json"}
-             :body (write-transit args)
-             :follow-redirects false
-             :as :stream}
-            opts)
-          (fn [resp]
-            (try
-              (async/put! ch (process-create-resp resp))
-              (catch Throwable t (async/put! ch t)))
-            (async/close! ch))))
-     #?(:cljs
-        (let [xhr (XhrIo.)]
-          (events/listen
-            xhr EventType.COMPLETE
-            (fn [_]
-              (try
-                (->> {:opts {:url (str (:href form))}
-                      :status (.getStatus xhr)
-                      :headers (-> (js->clj (.getResponseHeaders xhr))
-                                   (util/keyword-headers))
-                      :body (.getResponseText xhr)}
-                     (process-create-resp)
-                     (async/put! ch))
-                (catch js/Error e (async/put! ch e)))
-              (async/close! ch)))
-          (.send xhr (:href form) "POST" (util/write-transit args)
-                 #js {"Accept" "application/transit+json"
-                      "Content-Type" "application/transit+json"})))
-     ch)))
+    (let [ch (async/chan)]
+      #?(:clj
+         (http/request
+           (merge
+             {:method :post
+              :url (str (:href form))
+              :headers {"Accept" "application/transit+json"
+                        "Content-Type" "application/transit+json"}
+              :body (write-transit args)
+              :follow-redirects false
+              :as :stream}
+             opts)
+           (fn [resp]
+             (try
+               (async/put! ch (process-create-resp resp))
+               (catch Throwable t (async/put! ch t)))
+             (async/close! ch))))
+      #?(:cljs
+         (let [xhr (XhrIo.)]
+           (events/listen
+             xhr EventType.COMPLETE
+             (fn [_]
+               (try
+                 (->> {:opts {:url (str (:href form))}
+                       :status (.getStatus xhr)
+                       :headers (-> (js->clj (.getResponseHeaders xhr))
+                                    (util/keyword-headers))
+                       :body (.getResponseText xhr)}
+                      (process-create-resp)
+                      (async/put! ch))
+                 (catch js/Error e (async/put! ch e)))
+               (async/close! ch)))
+           (.send xhr (:href form) "POST" (util/write-transit args)
+                  #js {"Accept" "application/transit+json"
+                       "Content-Type" "application/transit+json"})))
+      ch)))
 
 ;; ---- Update ----------------------------------------------------------------
 
@@ -343,49 +346,49 @@
   ([resource :- Resource representation :- Representation]
     (update resource representation {}))
   ([resource :- Resource representation :- Representation opts :- Opts]
-   (let [uri (extract-uri resource)
-         ch (async/chan)]
-     #?(:clj
-        (http/request
-          (merge
-            {:method :put
-             :url (str uri)
-             :headers {"Accept" "application/transit+json"
+    (let [uri (extract-uri resource)
+          ch (async/chan)]
+      #?(:clj
+         (http/request
+           (merge
+             {:method :put
+              :url (str uri)
+              :headers {"Accept" "application/transit+json"
+                        "Content-Type" "application/transit+json"
+                        "If-Match" (if-match representation)}
+              :body (write-transit (-> representation
+                                       remove-controls
+                                       remove-embedded))
+              :follow-redirects false
+              :as :stream}
+             opts)
+           (fn [resp]
+             (try
+               (async/put! ch (process-update-resp resp representation))
+               (catch Throwable t (async/put! ch t)))
+             (async/close! ch))))
+      #?(:cljs
+         (let [xhr (XhrIo.)]
+           (events/listen
+             xhr EventType.COMPLETE
+             (fn [_]
+               (try
+                 (let [resp {:opts {:url (str uri)}
+                             :status (.getStatus xhr)
+                             :headers (-> (js->clj (.getResponseHeaders xhr))
+                                          (util/keyword-headers))
+                             :body (.getResponseText xhr)}]
+                   (async/put! ch (process-update-resp resp representation)))
+                 (catch js/Error e (async/put! ch e)))
+               (async/close! ch)))
+           (.send xhr uri "PUT"
+                  (util/write-transit (-> representation
+                                          remove-controls
+                                          remove-embedded))
+                  #js {"Accept" "application/transit+json"
                        "Content-Type" "application/transit+json"
-                       "If-Match" (if-match representation)}
-             :body (write-transit (-> representation
-                                      remove-controls
-                                      remove-embedded))
-             :follow-redirects false
-             :as :stream}
-            opts)
-          (fn [resp]
-            (try
-              (async/put! ch (process-update-resp resp representation))
-              (catch Throwable t (async/put! ch t)))
-            (async/close! ch))))
-     #?(:cljs
-        (let [xhr (XhrIo.)]
-          (events/listen
-            xhr EventType.COMPLETE
-            (fn [_]
-              (try
-                (let [resp {:opts {:url (str uri)}
-                            :status (.getStatus xhr)
-                            :headers (-> (js->clj (.getResponseHeaders xhr))
-                                         (util/keyword-headers))
-                            :body (.getResponseText xhr)}]
-                  (async/put! ch (process-update-resp resp representation)))
-                (catch js/Error e (async/put! ch e)))
-              (async/close! ch)))
-          (.send xhr uri "PUT"
-                 (util/write-transit (-> representation
-                                         remove-controls
-                                         remove-embedded))
-                 #js {"Accept" "application/transit+json"
-                      "Content-Type" "application/transit+json"
-                      "If-Match" (if-match representation)})))
-     ch)))
+                       "If-Match" (if-match representation)})))
+      ch)))
 
 ;; ---- Delete ----------------------------------------------------------------
 
@@ -413,36 +416,36 @@
   and :body."
   ([resource :- Resource] (delete resource {}))
   ([resource :- Resource opts :- Opts]
-   (let [uri (extract-uri resource)
-         ch (async/chan)]
-     #?(:clj
-        (http/request
-          (merge
-            {:method :delete
-             :url (str uri)
-             :follow-redirects false
-             :as :stream}
-            opts)
-          (fn [resp]
-            (try
-              (process-delete-resp resp)
-              (catch Throwable t (async/put! ch t)))
-            (async/close! ch))))
-     #?(:cljs
-        (let [xhr (XhrIo.)]
-          (events/listen
-            xhr EventType.COMPLETE
-            (fn [_]
-              (try
-                (some->> {:opts {:url (str uri)}
-                          :status (.getStatus xhr)
-                          :headers (-> (js->clj (.getResponseHeaders xhr))
-                                       (util/keyword-headers))
-                          :body (.getResponseText xhr)}
-                         (process-delete-resp)
-                         (async/put! ch))
-                (catch js/Error e (async/put! ch e)))
-              (async/close! ch)))
-          (.send xhr uri "DELETE" nil
-                 #js {"Accept" "application/transit+json"})))
-     ch)))
+    (let [uri (extract-uri resource)
+          ch (async/chan)]
+      #?(:clj
+         (http/request
+           (merge
+             {:method :delete
+              :url (str uri)
+              :follow-redirects false
+              :as :stream}
+             opts)
+           (fn [resp]
+             (try
+               (process-delete-resp resp)
+               (catch Throwable t (async/put! ch t)))
+             (async/close! ch))))
+      #?(:cljs
+         (let [xhr (XhrIo.)]
+           (events/listen
+             xhr EventType.COMPLETE
+             (fn [_]
+               (try
+                 (some->> {:opts {:url (str uri)}
+                           :status (.getStatus xhr)
+                           :headers (-> (js->clj (.getResponseHeaders xhr))
+                                        (util/keyword-headers))
+                           :body (.getResponseText xhr)}
+                          (process-delete-resp)
+                          (async/put! ch))
+                 (catch js/Error e (async/put! ch e)))
+               (async/close! ch)))
+           (.send xhr uri "DELETE" nil
+                  #js {"Accept" "application/transit+json"})))
+      ch)))
