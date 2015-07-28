@@ -150,6 +150,13 @@
 (defn- status-ex-data [opts status body]
   {:status status :uri (uri/create (:url opts)) :body body})
 
+(s/defn ^:private callback [ch process-fn :- ProcessFn]
+  (fn [resp]
+    (try
+      (async/put! ch (process-fn resp))
+      (catch Throwable t (async/put! ch t)))
+    (async/close! ch)))
+
 ;; ---- Fetch -----------------------------------------------------------------
 
 (defn- fetch-error-ex-info [opts error]
@@ -174,13 +181,6 @@
   (if-let [uri (:href resource)]
     uri
     resource))
-
-(s/defn ^:private callback [ch process-fn :- ProcessFn]
-  (fn [resp]
-    (try
-      (async/put! ch (process-fn resp))
-      (catch Throwable t (async/put! ch t)))
-    (async/close! ch)))
 
 (s/defn fetch
   "Returns a channel conveying the current representation of the remote
