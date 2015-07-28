@@ -82,6 +82,13 @@
    (s/optional-key :ops) Operations
    s/Any s/Any})
 
+(def Response
+  {s/Any s/Any})
+
+(def ProcessFn
+  "A function which processes a response."
+  (s/=> (s/either Representation Uri) Response))
+
 ;; ---- Private ---------------------------------------------------------------
 
 (def ^:private media-types {"application/transit+json" :json
@@ -168,6 +175,13 @@
     uri
     resource))
 
+(s/defn ^:private callback [ch process-fn :- ProcessFn]
+  (fn [resp]
+    (try
+      (async/put! ch (process-fn resp))
+      (catch Throwable t (async/put! ch t)))
+    (async/close! ch)))
+
 (s/defn fetch
   "Returns a channel conveying the current representation of the remote
   resource.
@@ -188,11 +202,7 @@
               :headers {"Accept" "application/transit+json"}
               :as :stream}
              opts)
-           (fn [resp]
-             (try
-               (async/put! ch (process-fetch-resp resp))
-               (catch Throwable t (async/put! ch t)))
-             (async/close! ch))))
+           (callback ch process-fetch-resp)))
       #?(:cljs
          (let [xhr (XhrIo.)]
            (events/listen
@@ -234,11 +244,7 @@
               :query-params (map-vals transit-write-str args)
               :as :stream}
              opts)
-           (fn [resp]
-             (try
-               (async/put! ch (process-fetch-resp resp))
-               (catch Throwable t (async/put! ch t)))
-             (async/close! ch)))
+           (callback ch process-fetch-resp))
          ch))
     #?(:cljs
        (fetch (util/set-query! (:href query) args) opts))))
@@ -288,11 +294,7 @@
               :follow-redirects false
               :as :stream}
              opts)
-           (fn [resp]
-             (try
-               (async/put! ch (process-create-resp resp))
-               (catch Throwable t (async/put! ch t)))
-             (async/close! ch))))
+           (callback ch process-create-resp)))
       #?(:cljs
          (let [xhr (XhrIo.)]
            (events/listen
@@ -367,11 +369,7 @@
               :follow-redirects false
               :as :stream}
              opts)
-           (fn [resp]
-             (try
-               (async/put! ch (process-update-resp resp representation))
-               (catch Throwable t (async/put! ch t)))
-             (async/close! ch))))
+           (callback ch #(process-update-resp % representation))))
       #?(:cljs
          (let [xhr (XhrIo.)]
            (events/listen
