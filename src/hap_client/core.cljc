@@ -79,7 +79,8 @@
    (s/optional-key :queries) Queries
    (s/optional-key :forms) Forms
    (s/optional-key :embedded) Embedded
-   (s/optional-key :ops) Operations})
+   (s/optional-key :ops) Operations
+   s/Any s/Any})
 
 ;; ---- Private ---------------------------------------------------------------
 
@@ -153,7 +154,8 @@
                 (:url opts))
            (status-ex-data opts status body)))
 
-(defn- process-fetch-resp [{:keys [opts error status headers] :as resp}]
+(s/defn ^:private process-fetch-resp :- Representation
+  [{:keys [opts error status headers] :as resp}]
   (when error
     (throw (fetch-error-ex-info opts error)))
   (let [{:keys [body]} (parse-response resp)]
@@ -188,7 +190,7 @@
              opts)
            (fn [resp]
              (try
-               (some->> (process-fetch-resp resp) (async/put! ch))
+               (async/put! ch (process-fetch-resp resp))
                (catch Throwable t (async/put! ch t)))
              (async/close! ch))))
       #?(:cljs
@@ -234,7 +236,7 @@
              opts)
            (fn [resp]
              (try
-               (some->> (process-fetch-resp resp) (async/put! ch))
+               (async/put! ch (process-fetch-resp resp))
                (catch Throwable t (async/put! ch t)))
              (async/close! ch)))
          ch))
@@ -257,7 +259,8 @@
                 (:url opts))
            {:uri (uri/create (:url opts))}))
 
-(defn- process-create-resp [{:keys [opts error status headers] :as resp}]
+(s/defn ^:private process-create-resp :- Uri
+  [{:keys [opts error status headers] :as resp}]
   (when error
     (throw (create-error-ex-info opts error)))
   (when (not= 201 status)
@@ -324,7 +327,8 @@
                 "resource at " (:url opts))
            (status-ex-data opts status body)))
 
-(defn- process-update-resp [{:keys [opts error status headers] :as resp} rep]
+(s/defn ^:private process-update-resp :- Representation
+  [{:keys [opts error status headers] :as resp} rep]
   (when error
     (throw (update-error-ex-info opts error)))
   (when (not= 204 status)
