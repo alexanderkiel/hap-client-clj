@@ -1,24 +1,23 @@
 (ns hap-client.core
   (:require
-    #?@(:clj [[clojure.core.async :as async]
-              [clojure.java.io :as io]
-              [clojure.tools.logging :refer [debug]]
-              [org.httpkit.client :as http]])
-    #?@(:cljs [[plumbing.core :refer [map-vals]]
+    #?@(:clj  [[clojure.core.async :as async]
+               [clojure.java.io :as io]
+               [clojure.tools.logging :refer [debug]]
+               [org.httpkit.client :as http]]
+        :cljs [[plumbing.core :refer [map-vals]]
                [cljs.core.async :as async]
                [goog.events :as events]
                [hap-client.impl.util :as util]])
-              [cognitect.transit :as transit]
-              [plumbing.core :refer [assoc-when map-vals]]
-              [schema.core :as s :refer [Str]]
-              [hap-client.impl.uri :as uri]
-              [transit-schema.core :as ts])
-  #?(:clj
-     (:import [java.io ByteArrayOutputStream]
-              [java.net URI]))
-  #?(:cljs
-     (:import [goog.net XhrIo EventType]
-       [goog Uri]))
+               [cognitect.transit :as transit]
+               [plumbing.core :refer [assoc-when map-vals]]
+               [schema.core :as s :refer [Str]]
+               [hap-client.impl.uri :as uri]
+               [transit-schema.core :as ts])
+  (:import
+    #?@(:clj  [[java.io ByteArrayOutputStream]
+               [java.net URI]]
+        :cljs [[goog.net XhrIo EventType]
+               [goog Uri]]))
   (:refer-clojure :exclude [update]))
 
 #?(:clj (set! *warn-on-reflection* true))
@@ -26,8 +25,8 @@
 ;; ---- Schemas ---------------------------------------------------------------
 
 (def Uri
-  #?(:clj URI)
-  #?(:cljs Uri))
+  #?(:clj  URI
+     :cljs Uri))
 
 (def Link
   {:href Uri})
@@ -105,8 +104,8 @@
      "r" (transit/read-handler resolve-uri))})
 
 (defn- read-transit [in format]
-  #?(:clj (transit/read (transit/reader in format read-opts)))
-  #?(:cljs (transit/read (transit/reader format read-opts) in)))
+  #?(:clj  (transit/read (transit/reader in format read-opts))
+     :cljs (transit/read (transit/reader format read-opts) in)))
 
 (defn- write-transit [o]
   #?(:clj
@@ -202,8 +201,8 @@
               :headers {"Accept" "application/transit+json"}
               :as :stream}
              opts)
-           (callback ch process-fetch-resp)))
-      #?(:cljs
+           (callback ch process-fetch-resp))
+         :cljs
          (let [xhr (XhrIo.)]
            (events/listen
              xhr EventType.COMPLETE
@@ -245,8 +244,8 @@
               :as :stream}
              opts)
            (callback ch process-fetch-resp))
-         ch))
-    #?(:cljs
+         ch)
+       :cljs
        (fetch (util/set-query! (:href query) args) opts))))
 
 ;; ---- Create ----------------------------------------------------------------
@@ -294,8 +293,8 @@
               :follow-redirects false
               :as :stream}
              opts)
-           (callback ch process-create-resp)))
-      #?(:cljs
+           (callback ch process-create-resp))
+         :cljs
          (let [xhr (XhrIo.)]
            (events/listen
              xhr EventType.COMPLETE
@@ -369,8 +368,8 @@
               :follow-redirects false
               :as :stream}
              opts)
-           (callback ch #(process-update-resp % representation))))
-      #?(:cljs
+           (callback ch #(process-update-resp % representation)))
+         :cljs
          (let [xhr (XhrIo.)]
            (events/listen
              xhr EventType.COMPLETE
@@ -433,8 +432,8 @@
              (try
                (process-delete-resp resp)
                (catch Throwable t (async/put! ch t)))
-             (async/close! ch))))
-      #?(:cljs
+             (async/close! ch)))
+         :cljs
          (let [xhr (XhrIo.)]
            (events/listen
              xhr EventType.COMPLETE
