@@ -149,12 +149,13 @@
 (defn- status-ex-data [opts status body]
   {:status status :uri (uri/create (:url opts)) :body body})
 
-(s/defn ^:private callback [ch process-fn :- ProcessFn]
-  (fn [resp]
-    (try
-      (async/put! ch (process-fn resp))
-      (catch Throwable t (async/put! ch t)))
-    (async/close! ch)))
+#?(:clj
+   (s/defn ^:private callback [ch process-fn :- ProcessFn]
+     (fn [resp]
+       (try
+         (async/put! ch (process-fn resp))
+         (catch Throwable t (async/put! ch t)))
+       (async/close! ch))))
 
 ;; ---- Fetch -----------------------------------------------------------------
 
