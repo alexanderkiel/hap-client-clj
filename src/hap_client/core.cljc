@@ -193,7 +193,7 @@
   ([resource :- Resource opts :- Opts]
     (let [uri (extract-uri resource)
           ch (async/chan)]
-      #?(:clj (debug "Fetch" (str uri)))
+      #?(:clj (debug "Fetch" uri))
       #?(:clj
          (http/request
            (merge-with merge
