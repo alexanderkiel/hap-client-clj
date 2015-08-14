@@ -3,7 +3,9 @@
             [hap-client.core :refer :all]
             [org.httpkit.fake :refer :all]
             [clojure.core.async :refer [<!!]]
-            [schema.test :refer [validate-schemas]])
+            [schema.test :refer [validate-schemas]]
+            [hap-client.impl.transit :as t]
+            [clojure.java.io :as io])
   (:import [java.net URI])
   (:refer-clojure :exclude [update]))
 
@@ -14,7 +16,7 @@
     (with-fake-http ["uri-122654"
                      {:status 200
                       :headers {:content-type "application/transit+json"}
-                      :body (#'hap-client.core/write-transit {})}]
+                      :body (io/input-stream (t/write {}))}]
       (let [resp (<!! (fetch (URI/create "uri-122654")))]
         (is (map? resp)))))
 
@@ -22,7 +24,7 @@
     (with-fake-http ["uri-124919"
                      {:status 404
                       :headers {:content-type "application/transit+json"}
-                      :body (#'hap-client.core/write-transit {})}]
+                      :body (io/input-stream (t/write {}))}]
       (let [resp (<!! (fetch (URI/create "uri-124919")))]
         (is (instance? Exception resp))
         (is (= 404 (:status (ex-data resp))))
@@ -32,7 +34,7 @@
     (with-fake-http ["uri-123306"
                      {:status 200
                       :headers {:content-type "application/transit+json"}
-                      :body (#'hap-client.core/write-transit {})}]
+                      :body (io/input-stream (t/write {}))}]
       (let [resp (<!! (fetch "uri-123306"))]
         (is (map? resp)))))
 
@@ -40,7 +42,7 @@
     (with-fake-http ["uri-125417"
                      {:status 200
                       :headers {:content-type "application/transit+json"}
-                      :body (#'hap-client.core/write-transit {})}]
+                      :body (io/input-stream (t/write {}))}]
       (let [resp (<!! (fetch {:href (URI/create "uri-125417")}))]
         (is (map? resp)))))
 
@@ -48,7 +50,7 @@
     (with-fake-http [{:headers {"Accept" "application/transit+json"}}
                      {:status 200
                       :headers {:content-type "application/transit+json"}
-                      :body (#'hap-client.core/write-transit {})}]
+                      :body (io/input-stream (t/write {}))}]
       (let [resp (<!! (fetch "uri"))]
         (is (map? resp)))))
 
@@ -56,7 +58,7 @@
     (with-fake-http [{:headers {"Accept" "application/transit+json"}}
                      {:status 200
                       :headers {:content-type "application/transit+json"}
-                      :body (#'hap-client.core/write-transit {})}]
+                      :body (io/input-stream (t/write {}))}]
       (let [resp (<!! (fetch "uri" {:headers {}}))]
         (is (map? resp))))))
 
@@ -65,7 +67,7 @@
     (with-fake-http ["uri-142522"
                      {:status 200
                       :headers {:content-type "application/transit+json"}
-                      :body (#'hap-client.core/write-transit {})}]
+                      :body (io/input-stream (t/write {}))}]
       (let [resp (<!! (execute {:href (URI/create "uri-142522")} {}))]
         (is (map? resp))))))
 

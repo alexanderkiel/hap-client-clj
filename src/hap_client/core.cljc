@@ -12,6 +12,7 @@
                [plumbing.core :refer [assoc-when map-vals]]
                [schema.core :as s :refer [Str]]
                [hap-client.impl.uri :as uri]
+               [hap-client.impl.transit :as t]
                [transit-schema.core :as ts])
   (:import
     #?@(:clj  [[java.io ByteArrayOutputStream]
@@ -106,18 +107,6 @@
 (defn- read-transit [in format]
   #?(:clj  (transit/read (transit/reader in format read-opts))
      :cljs (transit/read (transit/reader format read-opts) in)))
-
-(defn- write-transit [o]
-  #?(:clj
-     (let [out (ByteArrayOutputStream.)]
-       (transit/write (transit/writer out :json {:handlers ts/write-handlers}) o)
-       (io/input-stream (.toByteArray out)))))
-
-(defn- transit-write-str [o]
-  #?(:clj
-     (let [out (ByteArrayOutputStream.)]
-       (transit/write (transit/writer out :json {:handlers ts/write-handlers}) o)
-       (String. (.toByteArray out)))))
 
 (defn- ensure-ops-set [doc]
   (if (set? (:ops doc)) doc (clojure.core/update doc :ops set)))
@@ -241,7 +230,7 @@
              {:method :get
               :url (str (:href query))
               :headers {"Accept" "application/transit+json"}
-              :query-params (map-vals transit-write-str args)
+              :query-params (map-vals t/write-str args)
               :as :stream}
              opts)
            (callback ch process-fetch-resp))
@@ -290,7 +279,7 @@
               :url (str (:href form))
               :headers {"Accept" "application/transit+json"
                         "Content-Type" "application/transit+json"}
-              :body (write-transit args)
+              :body (io/input-stream (t/write args))
               :follow-redirects false
               :as :stream}
              opts)
@@ -310,7 +299,7 @@
                       (async/put! ch))
                  (catch js/Error e (async/put! ch e)))
                (async/close! ch)))
-           (.send xhr (:href form) "POST" (util/write-transit args)
+           (.send xhr (:href form) "POST" (t/write args)
                   #js {"Accept" "application/transit+json"
                        "Content-Type" "application/transit+json"})))
       ch)))
@@ -363,9 +352,11 @@
               :headers {"Accept" "application/transit+json"
                         "Content-Type" "application/transit+json"
                         "If-Match" (if-match representation)}
-              :body (write-transit (-> representation
-                                       remove-controls
-                                       remove-embedded))
+              :body (-> representation
+                        remove-controls
+                        remove-embedded
+                        t/write
+                        io/input-stream)
               :follow-redirects false
               :as :stream}
              opts)
@@ -385,9 +376,10 @@
                  (catch js/Error e (async/put! ch e)))
                (async/close! ch)))
            (.send xhr uri "PUT"
-                  (util/write-transit (-> representation
-                                          remove-controls
-                                          remove-embedded))
+                  (-> representation
+                      remove-controls
+                      remove-embedded
+                      t/write)
                   #js {"Accept" "application/transit+json"
                        "Content-Type" "application/transit+json"
                        "If-Match" (if-match representation)})))
