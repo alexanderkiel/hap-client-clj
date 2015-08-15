@@ -30,7 +30,8 @@
      :cljs Uri))
 
 (def Link
-  {:href Uri})
+  {:href Uri
+   (s/optional-key :label) Str})
 
 (def Query
   {:href Uri})
