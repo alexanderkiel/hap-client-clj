@@ -1,10 +1,11 @@
 (ns hap-client.core
   (:require
-    #?@(:clj  [[clojure.core.async :as async]
+    #?@(:clj  [[plumbing.core :refer [letk]]
+               [clojure.core.async :as async]
                [clojure.java.io :as io]
                [clojure.tools.logging :refer [debug]]
                [org.httpkit.client :as http]]
-        :cljs [[plumbing.core :refer [map-vals]]
+        :cljs [[plumbing.core :refer [map-vals] :refer-macros [letk]]
                [cljs.core.async :as async]
                [goog.events :as events]
                [hap-client.impl.util :as util]])
@@ -162,7 +163,7 @@
   [{:keys [opts error status headers] :as resp}]
   (when error
     (throw (fetch-error-ex-info opts error)))
-  (let [{:keys [body]} (parse-response resp)]
+  (letk [[body] (parse-response resp)]
     (condp = status
       200 (assoc-when body :etag (:etag headers))
       (throw (fetch-status-ex-info opts status body)))))
