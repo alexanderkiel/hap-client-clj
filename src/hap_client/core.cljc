@@ -11,7 +11,7 @@
                [hap-client.impl.util :as util]])
                [cognitect.transit :as transit]
                [plumbing.core :refer [assoc-when map-vals]]
-               [schema.core :as s :refer [Str]]
+               [schema.core :as s :refer [Str Bool]]
                [hap-client.impl.uri :as uri]
                [hap-client.impl.transit :as t]
                [transit-schema.core :as ts])
@@ -32,17 +32,33 @@
 
 (def Link
   {:href Uri
-   (s/optional-key :label) Str})
+   (s/optional-key :label) Str
+   s/Any s/Any})
+
+(def Param
+  {:type s/Any
+   (s/optional-key :optional) Bool
+   (s/optional-key :label) Str
+   s/Any s/Any})
+
+(def Params
+  {s/Keyword Param})
 
 (def Query
-  {:href Uri})
+  {:href Uri
+   :params Params
+   (s/optional-key :label) Str
+   s/Any s/Any})
 
 (def Args
   "A map of query/form param keyword to value."
   {s/Keyword s/Any})
 
 (def Form
-  {:href Uri})
+  {:href Uri
+   :params Params
+   (s/optional-key :label) Str
+   s/Any s/Any})
 
 (def Resource
   "Client side representation of a remote resource."

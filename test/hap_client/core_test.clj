@@ -68,7 +68,8 @@
                      {:status 200
                       :headers {:content-type "application/transit+json"}
                       :body (io/input-stream (t/write {}))}]
-      (let [resp (<!! (execute {:href (URI/create "uri-142522")} {}))]
+      (let [resp (<!! (execute {:href (URI/create "uri-142522")
+                                :params {}} {}))]
         (is (map? resp))))))
 
 (deftest create-test
@@ -77,7 +78,8 @@
                       :url "uri-141743"}
                      {:status 201
                       :headers {:location "uri-141811"}}]
-      (let [resp (<!! (create {:href (URI/create "uri-141743")} {}))]
+      (let [resp (<!! (create {:href (URI/create "uri-141743")
+                               :params {}} {}))]
         (is (= (URI/create "uri-141811") resp))))))
 
 (deftest update-test
