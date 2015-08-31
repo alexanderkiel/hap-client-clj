@@ -52,10 +52,19 @@
   "Custom request headers."
   {Str Str})
 
+(def TagName
+  "A Transit tag name."
+  Str)
+
+(def ReadHandler
+  "A Transit read handler."
+  s/Any)
+
 (def Opts
   "Request options to support authentication and other things through custom
   request headers."
-  {(s/optional-key :headers) CustomRequestHeaders})
+  {(s/optional-key :headers) CustomRequestHeaders
+   (s/optional-key :read-handlers) {TagName ReadHandler}})
 
 (def Links
   {s/Keyword (s/either Link [Link])})
@@ -101,22 +110,45 @@
 (defn- resolve-uri [uri]
   (uri/resolve *base-uri* uri))
 
-(def ^:private read-opts
-  {:handlers
-   (assoc ts/read-handlers
-     "r" (transit/read-handler resolve-uri)
-     #?@(:cljs ["u" (transit/read-handler uuid)]))})
+(def ^:private default-read-handlers
+  (assoc ts/read-handlers
+    "r" (transit/read-handler resolve-uri)
+    #?@(:cljs ["u" (transit/read-handler uuid)])))
 
-(defn- read-transit [in format]
+#?(:clj
+   (deftype HandlerMapContainer [m]
+     transit/HandlerMapProvider
+     (handler-map [_] m)))
+
+#?(:clj
+   (def ^:private read-handler-map-provider
+     (transit/read-handler-map default-read-handlers)))
+
+(defn read-handler-map [custom-handlers]
+  #?(:clj
+     (HandlerMapContainer.
+       (transit/handler-map
+         (transit/read-handler-map (merge default-read-handlers custom-handlers))))
+     :cljs
+     (merge default-read-handlers custom-handlers)))
+
+(defn- mk-read-handlers [read-handlers]
+  (cond
+    (nil? read-handlers)
+    #?(:clj read-handler-map-provider :cljs default-read-handlers)
+    #?@(:clj [(instance? HandlerMapContainer read-handlers) read-handlers])
+    :else (read-handler-map read-handlers)))
+
+(defn- read-transit [in format read-opts]
   #?(:clj  (transit/read (transit/reader in format read-opts))
      :cljs (transit/read (transit/reader format read-opts) in)))
 
 (defn- ensure-ops-set [doc]
   (if (set? (:ops doc)) doc (clojure.core/update doc :ops set)))
 
-(defn- parse-body [opts format body]
+(defn- parse-body [opts format read-opts body]
   (->> (binding [*base-uri* (uri/create (:url opts))]
-         (read-transit body format))
+         (read-transit body format read-opts))
        (ensure-ops-set)))
 
 (defn- content-type-ex-info [opts content-type status]
@@ -129,10 +161,10 @@
             :uri (uri/create (:url opts))
             :status status}))
 
-(defn- parse-response [{:keys [opts headers status] :as resp}]
+(defn- parse-response [read-opts {:keys [opts headers status] :as resp}]
   (let [content-type (:content-type headers)]
     (if-let [format (media-types content-type)]
-      (clojure.core/update resp :body #(parse-body opts format %))
+      (clojure.core/update resp :body #(parse-body opts format read-opts %))
       (throw (content-type-ex-info opts content-type status)))))
 
 (defn- error-ex-data [opts error]
@@ -161,10 +193,10 @@
            (status-ex-data opts status body)))
 
 (s/defn ^:private process-fetch-resp :- Representation
-  [{:keys [opts error status headers] :as resp}]
+  [read-opts {:keys [opts error status headers] :as resp}]
   (when error
     (throw (fetch-error-ex-info opts error)))
-  (letk [[body] (parse-response resp)]
+  (letk [[body] (parse-response read-opts resp)]
     (condp = status
       200 (assoc-when body :etag (:etag headers))
       (throw (fetch-status-ex-info opts status body)))))
@@ -184,7 +216,8 @@
   ([resource :- Resource] (fetch resource {}))
   ([resource :- Resource opts :- Opts]
     (let [uri (extract-uri resource)
-          ch (async/chan)]
+          ch (async/chan)
+          read-opts {:handlers (mk-read-handlers (:read-handlers opts))}]
       #?(:clj (debug "Fetch" uri))
       #?(:clj
          (http/request
@@ -194,7 +227,7 @@
               :headers {"Accept" "application/transit+json"}
               :as :stream}
              opts)
-           (callback ch process-fetch-resp))
+           (callback ch #(process-fetch-resp read-opts %)))
          :cljs
          (let [xhr (XhrIo.)]
            (events/listen
@@ -206,7 +239,7 @@
                            :headers (-> (js->clj (.getResponseHeaders xhr))
                                         (util/keyword-headers))
                            :body (.getResponseText xhr)}
-                          (process-fetch-resp)
+                          (process-fetch-resp read-opts)
                           (async/put! ch))
                  (catch js/Error e (async/put! ch e)))
                (async/close! ch)))
@@ -225,9 +258,10 @@
   200 (Ok) responses. The exception data of non 200 responses contains :status
   and :body."
   ([query :- Query args :- Args] (execute query args {}))
-  ([query :- Query args :- Args opts]
+  ([query :- Query args :- Args opts :- Opts]
     #?(:clj
-       (let [ch (async/chan)]
+       (let [ch (async/chan)
+             read-opts {:handlers (mk-read-handlers (:read-handlers opts))}]
          (http/request
            (merge-with merge
              {:method :get
@@ -236,7 +270,7 @@
               :query-params (map-vals t/write-str args)
               :as :stream}
              opts)
-           (callback ch process-fetch-resp))
+           (callback ch #(process-fetch-resp read-opts %)))
          ch)
        :cljs
        (fetch (util/set-query! (:href query) args) opts))))
@@ -258,11 +292,11 @@
            {:uri (uri/create (:url opts))}))
 
 (s/defn ^:private process-create-resp :- Uri
-  [{:keys [opts error status headers] :as resp}]
+  [read-opts {:keys [opts error status headers] :as resp}]
   (when error
     (throw (create-error-ex-info opts error)))
   (when (not= 201 status)
-    (throw (create-status-ex-info opts status (:body (parse-response resp)))))
+    (throw (create-status-ex-info opts status (:body (parse-response read-opts resp)))))
   (if-let [location (:location headers)]
     (uri/resolve (uri/create (:url opts)) location)
     (throw (missing-location-ex-info opts))))
@@ -274,7 +308,8 @@
   created."
   ([form :- Form args :- Args] (create form args {}))
   ([form :- Form args :- Args opts :- Opts]
-    (let [ch (async/chan)]
+    (let [ch (async/chan)
+          read-opts {:handlers (mk-read-handlers (:read-handlers opts))}]
       #?(:clj
          (http/request
            (merge-with merge
@@ -286,7 +321,7 @@
               :follow-redirects false
               :as :stream}
              opts)
-           (callback ch process-create-resp))
+           (callback ch #(process-create-resp read-opts %)))
          :cljs
          (let [xhr (XhrIo.)]
            (events/listen
@@ -298,7 +333,7 @@
                        :headers (-> (js->clj (.getResponseHeaders xhr))
                                     (util/keyword-headers))
                        :body (.getResponseText xhr)}
-                      (process-create-resp)
+                      (process-create-resp read-opts)
                       (async/put! ch))
                  (catch js/Error e (async/put! ch e)))
                (async/close! ch)))
@@ -322,11 +357,11 @@
            (status-ex-data opts status body)))
 
 (s/defn ^:private process-update-resp :- Representation
-  [{:keys [opts error status headers] :as resp} rep]
+  [read-opts {:keys [opts error status headers] :as resp} rep]
   (when error
     (throw (update-error-ex-info opts error)))
   (when (not= 204 status)
-    (throw (update-status-ex-info opts status (:body (parse-response resp)))))
+    (throw (update-status-ex-info opts status (:body (parse-response read-opts resp)))))
   (assoc-when rep :etag (:etag headers)))
 
 (defn- remove-controls [representation]
@@ -346,7 +381,8 @@
     (update resource representation {}))
   ([resource :- Resource representation :- Representation opts :- Opts]
     (let [uri (extract-uri resource)
-          ch (async/chan)]
+          ch (async/chan)
+          read-opts {:handlers (mk-read-handlers (:read-handlers opts))}]
       #?(:clj
          (http/request
            (merge-with merge
@@ -363,7 +399,7 @@
               :follow-redirects false
               :as :stream}
              opts)
-           (callback ch #(process-update-resp % representation)))
+           (callback ch #(process-update-resp read-opts % representation)))
          :cljs
          (let [xhr (XhrIo.)]
            (events/listen
@@ -375,7 +411,7 @@
                              :headers (-> (js->clj (.getResponseHeaders xhr))
                                           (util/keyword-headers))
                              :body (.getResponseText xhr)}]
-                   (async/put! ch (process-update-resp resp representation)))
+                   (async/put! ch (process-update-resp read-opts resp representation)))
                  (catch js/Error e (async/put! ch e)))
                (async/close! ch)))
            (.send xhr uri "PUT"
@@ -399,11 +435,11 @@
                 "resource at " (:url opts))
            (status-ex-data opts status body)))
 
-(defn- process-delete-resp [{:keys [opts error status] :as resp}]
+(defn- process-delete-resp [read-opts {:keys [opts error status] :as resp}]
   (when error
     (throw (delete-error-ex-info opts error)))
   (when (not= 204 status)
-    (throw (delete-status-ex-info opts status (:body (parse-response resp))))))
+    (throw (delete-status-ex-info opts status (:body (parse-response read-opts resp))))))
 
 (s/defn delete
   "Deletes the resource using optional opts and returns a channel which closes
@@ -415,7 +451,8 @@
   ([resource :- Resource] (delete resource {}))
   ([resource :- Resource opts :- Opts]
     (let [uri (extract-uri resource)
-          ch (async/chan)]
+          ch (async/chan)
+          read-opts {:handlers (mk-read-handlers (:read-handlers opts))}]
       #?(:clj
          (http/request
            (merge-with merge
@@ -426,7 +463,7 @@
              opts)
            (fn [resp]
              (try
-               (process-delete-resp resp)
+               (process-delete-resp read-opts resp)
                (catch Throwable t (async/put! ch t)))
              (async/close! ch)))
          :cljs
@@ -440,7 +477,7 @@
                            :headers (-> (js->clj (.getResponseHeaders xhr))
                                         (util/keyword-headers))
                            :body (.getResponseText xhr)}
-                          (process-delete-resp)
+                          (process-delete-resp read-opts)
                           (async/put! ch))
                  (catch js/Error e (async/put! ch e)))
                (async/close! ch)))
