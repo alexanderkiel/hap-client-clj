@@ -1,17 +1,11 @@
 (ns hap-client.impl.transit
-  (:require [cognitect.transit :as t]
-            [transit-schema.core :as ts])
+  (:require [cognitect.transit :as t])
   #?(:clj
      (:import [java.io ByteArrayOutputStream])))
 
 #?(:clj (set! *warn-on-reflection* true))
 
-(def ^:private write-opts
-  {:handlers
-   #?(:clj  (t/write-handler-map ts/write-handlers)
-      :cljs ts/write-handlers)})
-
-(defn write [x]
+(defn write [write-opts x]
   #?(:clj
      (let [out (ByteArrayOutputStream.)]
        (t/write (t/writer out :json write-opts) x)
@@ -24,6 +18,6 @@
            (throw (ex-info "Error while writing Transit"
                            {:val x :opts write-opts} e)))))))
 
-(defn write-str [x]
-  #?(:clj  (String. ^bytes (write x) "utf-8")
-     :cljs (write x)))
+(defn write-str [write-opts x]
+  #?(:clj  (String. ^bytes (write write-opts x) "utf-8")
+     :cljs (write write-opts x)))

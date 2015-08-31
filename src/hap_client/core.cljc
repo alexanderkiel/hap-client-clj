@@ -76,11 +76,16 @@
   "A Transit read handler."
   s/Any)
 
+(def WriteHandler
+  "A Transit write handler."
+  s/Any)
+
 (def Opts
   "Request options to support authentication and other things through custom
   request headers."
   {(s/optional-key :headers) CustomRequestHeaders
-   (s/optional-key :read-handlers) {TagName ReadHandler}})
+   (s/optional-key :read-handlers) {TagName ReadHandler}
+   (s/optional-key :write-handlers) {s/Any WriteHandler}})
 
 (def Links
   {s/Keyword (s/either Link [Link])})
@@ -154,6 +159,28 @@
     #?(:clj read-handler-map-provider :cljs default-read-handlers)
     #?@(:clj [(instance? HandlerMapContainer read-handlers) read-handlers])
     :else (read-handler-map read-handlers)))
+
+(def ^:private default-write-handlers
+  ts/write-handlers)
+
+#?(:clj
+   (def ^:private write-handler-map-provider
+     (transit/write-handler-map default-write-handlers)))
+
+(defn write-handler-map [custom-handlers]
+  #?(:clj
+     (HandlerMapContainer.
+       (transit/handler-map
+         (transit/write-handler-map (merge default-write-handlers custom-handlers))))
+     :cljs
+     (merge default-write-handlers custom-handlers)))
+
+(defn- mk-write-handlers [write-handlers]
+  (cond
+    (nil? write-handlers)
+    #?(:clj write-handler-map-provider :cljs default-write-handlers)
+    #?@(:clj [(instance? HandlerMapContainer write-handlers) write-handlers])
+    :else (write-handler-map write-handlers)))
 
 (defn- read-transit [in format read-opts]
   #?(:clj  (transit/read (transit/reader in format read-opts))
@@ -275,21 +302,22 @@
   and :body."
   ([query :- Query args :- Args] (execute query args {}))
   ([query :- Query args :- Args opts :- Opts]
-    #?(:clj
-       (let [ch (async/chan)
-             read-opts {:handlers (mk-read-handlers (:read-handlers opts))}]
-         (http/request
-           (merge-with merge
-             {:method :get
-              :url (str (:href query))
-              :headers {"Accept" "application/transit+json"}
-              :query-params (map-vals t/write-str args)
-              :as :stream}
-             opts)
-           (callback ch #(process-fetch-resp read-opts %)))
-         ch)
-       :cljs
-       (fetch (util/set-query! (:href query) args) opts))))
+    (let [write-opts {:handlers (mk-write-handlers (:write-handlers opts))}]
+      #?(:clj
+         (let [ch (async/chan)
+               read-opts {:handlers (mk-read-handlers (:read-handlers opts))}]
+           (http/request
+             (merge-with merge
+               {:method :get
+                :url (str (:href query))
+                :headers {"Accept" "application/transit+json"}
+                :query-params (map-vals (partial t/write-str write-opts) args)
+                :as :stream}
+               opts)
+             (callback ch #(process-fetch-resp read-opts %)))
+           ch)
+         :cljs
+         (fetch (util/set-query! write-opts (:href query) args) opts)))))
 
 ;; ---- Create ----------------------------------------------------------------
 
@@ -325,7 +353,8 @@
   ([form :- Form args :- Args] (create form args {}))
   ([form :- Form args :- Args opts :- Opts]
     (let [ch (async/chan)
-          read-opts {:handlers (mk-read-handlers (:read-handlers opts))}]
+          read-opts {:handlers (mk-read-handlers (:read-handlers opts))}
+          write-opts {:handlers (mk-write-handlers (:write-handlers opts))}]
       #?(:clj
          (http/request
            (merge-with merge
@@ -333,7 +362,7 @@
               :url (str (:href form))
               :headers {"Accept" "application/transit+json"
                         "Content-Type" "application/transit+json"}
-              :body (io/input-stream (t/write args))
+              :body (io/input-stream (t/write write-opts args))
               :follow-redirects false
               :as :stream}
              opts)
@@ -353,7 +382,7 @@
                       (async/put! ch))
                  (catch js/Error e (async/put! ch e)))
                (async/close! ch)))
-           (.send xhr (:href form) "POST" (t/write args)
+           (.send xhr (:href form) "POST" (t/write write-opts args)
                   #js {"Accept" "application/transit+json"
                        "Content-Type" "application/transit+json"})))
       ch)))
@@ -398,7 +427,8 @@
   ([resource :- Resource representation :- Representation opts :- Opts]
     (let [uri (extract-uri resource)
           ch (async/chan)
-          read-opts {:handlers (mk-read-handlers (:read-handlers opts))}]
+          read-opts {:handlers (mk-read-handlers (:read-handlers opts))}
+          write-opts {:handlers (mk-write-handlers (:write-handlers opts))}]
       #?(:clj
          (http/request
            (merge-with merge
@@ -407,11 +437,11 @@
               :headers {"Accept" "application/transit+json"
                         "Content-Type" "application/transit+json"
                         "If-Match" (if-match representation)}
-              :body (-> representation
-                        remove-controls
-                        remove-embedded
-                        t/write
-                        io/input-stream)
+              :body (->> representation
+                         remove-controls
+                         remove-embedded
+                         (t/write write-opts)
+                         io/input-stream)
               :follow-redirects false
               :as :stream}
              opts)
@@ -431,10 +461,10 @@
                  (catch js/Error e (async/put! ch e)))
                (async/close! ch)))
            (.send xhr uri "PUT"
-                  (-> representation
-                      remove-controls
-                      remove-embedded
-                      t/write)
+                  (->> representation
+                       remove-controls
+                       remove-embedded
+                       (t/write write-opts))
                   #js {"Accept" "application/transit+json"
                        "Content-Type" "application/transit+json"
                        "If-Match" (if-match representation)})))

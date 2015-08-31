@@ -7,7 +7,7 @@
 
 (deftest write-str-test
   (testing "strings"
-    (are [i o] (= o (write-str i))
+    (are [i o] (= o (write-str {} i))
       "foo" "[\"~#'\",\"foo\"]"
       "bar" "[\"~#'\",\"bar\"]"
       "\u2020" "[\"~#'\",\"\u2020\"]")))

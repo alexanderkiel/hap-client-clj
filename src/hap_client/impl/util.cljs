@@ -9,10 +9,10 @@
 (defn keyword-headers [headers]
   (map-keys keyword-header headers))
 
-(defn- set-parameter-value! [uri k v]
-  (.setParameterValue uri (name k) (t/write v)))
+(defn- set-parameter-value! [write-opts uri k v]
+  (.setParameterValue uri (name k) (t/write write-opts v)))
 
 (defn set-query!
   "Takes kvs from params and puts them as query params into the URI."
-  [uri params]
-  (reduce-kv set-parameter-value! uri params))
+  [write-opts uri params]
+  (reduce-kv (partial set-parameter-value! write-opts) uri params))
