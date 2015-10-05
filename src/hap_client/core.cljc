@@ -227,7 +227,7 @@
 ;; ---- Fetch -----------------------------------------------------------------
 
 (defn- fetch-error-ex-info [opts error]
-  (ex-info (str "Error while fetching the resource at " (:url opts))
+  (ex-info (str "Error while fetching the resource at " (:url opts) ": " error)
            (error-ex-data opts error)))
 
 (defn- fetch-status-ex-info [opts status body]
@@ -322,7 +322,7 @@
 ;; ---- Create ----------------------------------------------------------------
 
 (defn- create-error-ex-info [opts error]
-  (ex-info (str "Error while creating a resource using " (:url opts))
+  (ex-info (str "Error while creating a resource using " (:url opts) ": " error)
            (error-ex-data opts error)))
 
 (defn- create-status-ex-info [opts status body]
@@ -393,7 +393,7 @@
   (or (:etag rep) "*"))
 
 (defn- update-error-ex-info [opts error]
-  (ex-info (str "Error while updating the resource at " (:url opts))
+  (ex-info (str "Error while updating the resource at " (:url opts) ": " error)
            (error-ex-data opts error)))
 
 (defn- update-status-ex-info [opts status body]
@@ -473,7 +473,7 @@
 ;; ---- Delete ----------------------------------------------------------------
 
 (defn- delete-error-ex-info [opts error]
-  (ex-info (str "Error while deleting the resource at " (:url opts))
+  (ex-info (str "Error while deleting the resource at " (:url opts) ": " error)
            (error-ex-data opts error)))
 
 (defn- delete-status-ex-info [opts status body]
