@@ -199,7 +199,7 @@
              (if content-type
                (str "Invalid Content-Type " content-type " ")
                (str "Missing Content-Type "))
-             "while fetching " (:url opts))
+             "while fetching " (:url opts) ".")
            {:content-type content-type
             :uri (uri/create (:url opts))
             :status status}))
