@@ -1,7 +1,7 @@
 (ns hap-client.core-test
   (:require [clojure.test :refer :all]
             [hap-client.core :refer :all]
-            [org.httpkit.fake :refer :all]
+            [org.httpkit.fake :refer [with-fake-http]]
             [clojure.core.async :refer [<!!]]
             [schema.test :refer [validate-schemas]]
             [hap-client.impl.transit :as t]
