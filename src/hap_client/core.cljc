@@ -260,6 +260,7 @@
   ([resource :- Resource opts :- Opts]
     (let [uri (extract-uri resource)
           ch (async/chan)
+          headers {"Accept" "application/transit+json"}
           read-opts {:handlers (mk-read-handlers (:read-handlers opts))}]
       #?(:clj (debug "Fetch" uri))
       #?(:clj
@@ -267,7 +268,7 @@
            (merge-with merge
              {:method :get
               :url (str uri)
-              :headers {"Accept" "application/transit+json"}
+              :headers headers
               :as :stream}
              opts)
            (callback ch #(process-fetch-resp read-opts %)))
@@ -286,8 +287,7 @@
                           (async/put! ch))
                  (catch js/Error e (async/put! ch e)))
                (async/close! ch)))
-           (.send xhr uri "GET" nil
-                  #js {"Accept" "application/transit+json"})))
+           (.send xhr uri "GET" nil (clj->js (merge headers (:headers opts))))))
       ch)))
 
 ;; ---- Query -----------------------------------------------------------------
@@ -353,6 +353,8 @@
   ([form :- Form args :- Args] (create form args {}))
   ([form :- Form args :- Args opts :- Opts]
     (let [ch (async/chan)
+          headers {"Accept" "application/transit+json"
+                   "Content-Type" "application/transit+json"}
           read-opts {:handlers (mk-read-handlers (:read-handlers opts))}
           write-opts {:handlers (mk-write-handlers (:write-handlers opts))}]
       #?(:clj
@@ -360,8 +362,7 @@
            (merge-with merge
              {:method :post
               :url (str (:href form))
-              :headers {"Accept" "application/transit+json"
-                        "Content-Type" "application/transit+json"}
+              :headers headers
               :body (io/input-stream (t/write write-opts args))
               :follow-redirects false
               :as :stream}
@@ -383,8 +384,7 @@
                  (catch js/Error e (async/put! ch e)))
                (async/close! ch)))
            (.send xhr (:href form) "POST" (t/write write-opts args)
-                  #js {"Accept" "application/transit+json"
-                       "Content-Type" "application/transit+json"})))
+                  (clj->js (merge headers (:headers opts))))))
       ch)))
 
 ;; ---- Update ----------------------------------------------------------------
@@ -427,6 +427,9 @@
   ([resource :- Resource representation :- Representation opts :- Opts]
     (let [uri (extract-uri resource)
           ch (async/chan)
+          headers {"Accept" "application/transit+json"
+                   "Content-Type" "application/transit+json"
+                   "If-Match" (if-match representation)}
           read-opts {:handlers (mk-read-handlers (:read-handlers opts))}
           write-opts {:handlers (mk-write-handlers (:write-handlers opts))}]
       #?(:clj
@@ -434,9 +437,7 @@
            (merge-with merge
              {:method :put
               :url (str uri)
-              :headers {"Accept" "application/transit+json"
-                        "Content-Type" "application/transit+json"
-                        "If-Match" (if-match representation)}
+              :headers headers
               :body (->> representation
                          remove-controls
                          remove-embedded
@@ -465,9 +466,7 @@
                        remove-controls
                        remove-embedded
                        (t/write write-opts))
-                  #js {"Accept" "application/transit+json"
-                       "Content-Type" "application/transit+json"
-                       "If-Match" (if-match representation)})))
+                  (clj->js (merge headers (:headers opts))))))
       ch)))
 
 ;; ---- Delete ----------------------------------------------------------------
@@ -498,12 +497,14 @@
   ([resource :- Resource opts :- Opts]
     (let [uri (extract-uri resource)
           ch (async/chan)
+          headers {"Accept" "application/transit+json"}
           read-opts {:handlers (mk-read-handlers (:read-handlers opts))}]
       #?(:clj
          (http/request
            (merge-with merge
              {:method :delete
               :url (str uri)
+              :headers headers
               :follow-redirects false
               :as :stream}
              opts)
@@ -528,5 +529,5 @@
                  (catch js/Error e (async/put! ch e)))
                (async/close! ch)))
            (.send xhr uri "DELETE" nil
-                  #js {"Accept" "application/transit+json"})))
+                  (clj->js (merge headers (:headers opts))))))
       ch)))
