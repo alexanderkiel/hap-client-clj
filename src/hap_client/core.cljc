@@ -39,6 +39,7 @@
   {:type s/Any
    (s/optional-key :optional) Bool
    (s/optional-key :label) Str
+   (s/optional-key :desc) Str
    s/Any s/Any})
 
 (def Params
@@ -46,8 +47,9 @@
 
 (def Query
   {:href Uri
-   :params Params
    (s/optional-key :label) Str
+   (s/optional-key :desc) Str
+   (s/optional-key :params) Params
    s/Any s/Any})
 
 (def Args
@@ -56,8 +58,9 @@
 
 (def Form
   {:href Uri
-   :params Params
    (s/optional-key :label) Str
+   (s/optional-key :desc) Str
+   (s/optional-key :params) Params
    s/Any s/Any})
 
 (def Resource
