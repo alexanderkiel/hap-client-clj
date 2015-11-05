@@ -18,8 +18,7 @@
   (:import
     #?@(:clj  [[java.io ByteArrayOutputStream]
                [java.net URI]]
-        :cljs [[goog.net XhrIo EventType]
-               [goog Uri]]))
+        :cljs [[goog.net XhrIo EventType]]))
   (:refer-clojure :exclude [update]))
 
 #?(:clj (set! *warn-on-reflection* true))
@@ -28,7 +27,7 @@
 
 (def Uri
   #?(:clj  URI
-     :cljs Uri))
+     :cljs goog/Uri))
 
 (def Link
   {:href Uri
