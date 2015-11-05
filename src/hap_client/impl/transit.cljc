@@ -15,7 +15,7 @@
        (try
          (t/write writer x)
          (catch js/Error e
-           (throw (ex-info "Error while writing Transit"
+           (throw (ex-info "Error while writing Transit."
                            {:val x :opts write-opts} e)))))))
 
 (defn write-str [write-opts x]
