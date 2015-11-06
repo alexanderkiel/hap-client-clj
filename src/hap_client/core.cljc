@@ -247,7 +247,7 @@
     (throw (fetch-error-ex-info opts error)))
   (letk [[body] (parse-response read-opts resp)]
     (condp = status
-      200 (assoc-when body :etag (:etag headers))
+      200 (assoc-when body ::etag (:etag headers))
       (throw (fetch-status-ex-info opts status body)))))
 
 (defn- extract-uri [resource]
@@ -258,6 +258,9 @@
 (s/defn fetch
   "Returns a channel conveying the current representation of the remote
   resource.
+
+  The representation contains an ETag if there was one in the response headers.
+  The ETag is than used on updates.
 
   Puts an ExceptionInfo onto the channel if there is any problem including non
   200 (Ok) responses. The exception data of non 200 responses contains :status
@@ -396,7 +399,7 @@
 ;; ---- Update ----------------------------------------------------------------
 
 (defn- if-match [rep]
-  (or (:etag rep) "*"))
+  (or (::etag rep) "*"))
 
 (defn- update-error-ex-info [opts error]
   (ex-info (str "Error while updating the resource at " (:url opts) ": " error)
@@ -413,7 +416,7 @@
     (throw (update-error-ex-info opts error)))
   (when (not= 204 status)
     (throw (update-status-ex-info opts status (:body (parse-response read-opts resp)))))
-  (assoc-when rep :etag (:etag headers)))
+  (assoc-when rep ::etag (:etag headers)))
 
 (defn- remove-controls [representation]
   (dissoc representation :links :queries :forms :embedded :ops))
@@ -423,8 +426,8 @@
 
 (s/defn update
   "Updates the resource to reflect the state of the given representation using
-  optional opts and returns a channel which conveys the given representation
-  with the new ETag after the resource was updated.
+  optional opts and returns a channel which conveys the representatio of the
+  resource after the update.
 
   Uses the ETag from representation for the conditional update if the
   representation contains one."
