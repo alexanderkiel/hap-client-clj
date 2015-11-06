@@ -62,14 +62,14 @@
       (let [resp (<!! (fetch "uri" {:headers {}}))]
         (is (map? resp))))))
 
-(deftest execute-test
+(deftest query-test
   (testing "200 response returns just the body"
     (with-fake-http ["uri-142522"
                      {:status 200
                       :headers {:content-type "application/transit+json"}
                       :body (io/input-stream (t/write {} {}))}]
-      (let [resp (<!! (execute {:href (URI/create "uri-142522")
-                                :params {}} {}))]
+      (let [resp (<!! (query {:href (URI/create "uri-142522")
+                              :params {}} {}))]
         (is (map? resp))))))
 
 (deftest create-test

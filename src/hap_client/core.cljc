@@ -294,7 +294,7 @@
 
 ;; ---- Query -----------------------------------------------------------------
 
-(s/defn execute
+(s/defn query
   "Executes the query using args and optional opts.
 
   Returns a channel conveying the result of the query.
@@ -302,7 +302,7 @@
   Puts an ExceptionInfo onto the channel if there is any problem including non
   200 (Ok) responses. The exception data of non 200 responses contains :status
   and :body."
-  ([query :- Query args :- Args] (execute query args {}))
+  ([q :- Query args :- Args] (query q args {}))
   ([query :- Query args :- Args opts :- Opts]
     (let [write-opts {:handlers (mk-write-handlers (:write-handlers opts))}]
       #?(:clj
