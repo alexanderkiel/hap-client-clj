@@ -1,4 +1,8 @@
 (ns hap-client.core
+  "HAP Client Implementation
+
+  There are 5 main functions in this namespace: fetch, query, create, update
+  and delete."
   (:require
     #?@(:clj  [[plumbing.core :refer [letk]]
                [clojure.core.async :as async]
