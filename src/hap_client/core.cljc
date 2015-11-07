@@ -418,12 +418,6 @@
     (throw (update-status-ex-info opts status (:body (parse-response read-opts resp)))))
   (assoc-when rep ::etag (:etag headers)))
 
-(defn- remove-controls [representation]
-  (dissoc representation :links :queries :forms :embedded :ops))
-
-(defn- remove-embedded [representation]
-  (dissoc representation :embedded))
-
 (s/defn update
   "Updates the resource to reflect the state of the given representation using
   optional opts and returns a channel which conveys the representatio of the
@@ -440,18 +434,15 @@
                    "Content-Type" "application/transit+json"
                    "If-Match" (if-match representation)}
           read-opts {:handlers (mk-read-handlers (:read-handlers opts))}
-          write-opts {:handlers (mk-write-handlers (:write-handlers opts))}]
+          write-opts {:handlers (mk-write-handlers (:write-handlers opts))}
+          payload (t/write write-opts (select-keys representation [:data]))]
       #?(:clj
          (http/request
            (merge-with merge
              {:method :put
               :url (str uri)
               :headers headers
-              :body (->> representation
-                         remove-controls
-                         remove-embedded
-                         (t/write write-opts)
-                         io/input-stream)
+              :body (io/input-stream payload)
               :follow-redirects false
               :as :stream}
              opts)
@@ -470,11 +461,7 @@
                    (async/put! ch (process-update-resp read-opts resp representation)))
                  (catch js/Error e (async/put! ch e)))
                (async/close! ch)))
-           (.send xhr uri "PUT"
-                  (->> representation
-                       remove-controls
-                       remove-embedded
-                       (t/write write-opts))
+           (.send xhr uri "PUT" payload
                   (clj->js (merge headers (:headers opts))))))
       ch)))
 
