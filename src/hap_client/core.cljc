@@ -13,6 +13,7 @@
                [cljs.core.async :as async]
                [goog.events :as events]
                [hap-client.impl.util :as util]])
+
                [cognitect.transit :as transit]
                [plumbing.core :refer [assoc-when map-vals]]
                [schema.core :as s :refer [Str Bool]]
