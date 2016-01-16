@@ -4,7 +4,7 @@ __This software is ALPHA.__
 
 [![Build Status](https://travis-ci.org/alexanderkiel/hap-client-clj.svg?branch=master)](https://travis-ci.org/alexanderkiel/hap-client-clj)
 
-A Clojure(Script) library which implements a generic Hypermedia Application 
+A Clojure(Script) library which implements a generic Hypermedia Application
 Protocol (HAP) client.
 
 ## Install
@@ -12,7 +12,7 @@ Protocol (HAP) client.
 To install, just add the following to your project dependencies:
 
 ```clojure
-[org.clojars.akiel/hap-client-clj "0.2"]
+[org.clojars.akiel/hap-client-clj "0.3"]
 ```
 
 ## Usage
@@ -41,8 +41,8 @@ To install, just add the following to your project dependencies:
 
 ## Schema Support
 
-HAP query and form params can have a `:type` which carries a [Schema][1]. HAP 
-Client Clojure supports all schemas which are supported by the 
+HAP query and form params can have a `:type` which carries a [Schema][1]. HAP
+Client Clojure supports all schemas which are supported by the
 [Transit Schema][2] lib.
 
 ## License
