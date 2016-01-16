@@ -1,4 +1,4 @@
-(defproject org.clojars.akiel/hap-client-clj "0.3"
+(defproject org.clojars.akiel/hap-client-clj "0.4-SNAPSHOT"
   :description "A Clojure(Script) HAP client library."
   :url "https://github.com/alexanderkiel/hap-client-clj"
 
@@ -9,10 +9,11 @@
                  [org.clojure/clojurescript "1.7.228"]
                  [org.clojure/core.async "0.2.371"]
                  [org.clojure/tools.logging "0.3.1"]
-                 [prismatic/plumbing "0.4.4"]
+                 [prismatic/plumbing "0.5.2"]
+                 [prismatic/schema "1.0.4"]
                  [http-kit "2.1.18"]
                  [com.cognitect/transit-clj "0.8.285"]
                  [com.cognitect/transit-cljs "0.8.237"]
-                 [org.clojars.akiel/transit-schema "0.3"]]
+                 [org.clojars.akiel/transit-schema "0.4"]]
 
   :profiles {:dev {:dependencies [[http-kit.fake "0.2.1"]]}})

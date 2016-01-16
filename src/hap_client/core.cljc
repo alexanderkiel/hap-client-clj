@@ -69,7 +69,7 @@
 
 (def Resource
   "Client side representation of a remote resource."
-  (s/either Uri Str Link))
+  (s/cond-pre Uri Str Link))
 
 (def CustomRequestHeaders
   "Custom request headers."
@@ -95,7 +95,7 @@
    (s/optional-key :write-handlers) {s/Any WriteHandler}})
 
 (def Links
-  {s/Keyword (s/either Link [Link])})
+  {s/Keyword (s/cond-pre Link [Link])})
 
 (def Queries
   {s/Keyword Query})
@@ -109,8 +109,8 @@
 (declare Representation)
 
 (def Embedded
-  {s/Keyword (s/either (s/recursive #'Representation)
-                       [(s/recursive #'Representation)])})
+  {s/Keyword (s/cond-pre (s/recursive #'Representation)
+                         [(s/recursive #'Representation)])})
 
 (def Representation
   {(s/optional-key :data) s/Any
@@ -126,7 +126,7 @@
 
 (def ProcessFn
   "A function which processes a response."
-  (s/=> (s/either Representation Uri) Response))
+  (s/=> (s/cond-pre Representation Uri) Response))
 
 ;; ---- Private ---------------------------------------------------------------
 
