@@ -1,13 +1,12 @@
 (ns hap-client.impl.util
-  (:require [plumbing.core :refer [map-keys]]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
             [hap-client.impl.transit :as t]))
 
 (defn keyword-header [header]
   (keyword (str/lower-case header)))
 
 (defn keyword-headers [headers]
-  (map-keys keyword-header headers))
+  (into {} (map (fn [[k v]] [k (keyword-header v)])) headers))
 
 (defn- set-parameter-value! [write-opts uri k v]
   (.setParameterValue uri (name k) (t/write write-opts v)))

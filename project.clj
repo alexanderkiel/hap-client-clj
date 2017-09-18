@@ -9,7 +9,6 @@
                  [org.clojure/clojurescript "1.7.228"]
                  [org.clojure/core.async "0.2.371"]
                  [org.clojure/tools.logging "0.3.1"]
-                 [prismatic/plumbing "0.5.2"]
                  [prismatic/schema "1.0.4"]
                  [http-kit "2.1.18"]
                  [com.cognitect/transit-clj "0.8.285"]

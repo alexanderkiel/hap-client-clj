@@ -4,18 +4,15 @@
   There are 5 main functions in this namespace: fetch, query, create, update
   and delete."
   (:require
-    #?@(:clj  [[plumbing.core :refer [letk]]
-               [clojure.core.async :as async]
+    #?@(:clj  [[clojure.core.async :as async]
                [clojure.java.io :as io]
                [clojure.tools.logging :refer [debug]]
                [org.httpkit.client :as http]]
-        :cljs [[plumbing.core :refer [map-vals] :refer-macros [letk]]
-               [cljs.core.async :as async]
+        :cljs [[cljs.core.async :as async]
                [goog.events :as events]
                [hap-client.impl.util :as util]])
 
                [cognitect.transit :as transit]
-               [plumbing.core :refer [assoc-when map-vals]]
                [schema.core :as s :refer [Str Bool]]
                [hap-client.impl.uri :as uri]
                [hap-client.impl.transit :as t]
@@ -246,9 +243,9 @@
   [read-opts {:keys [opts error status headers] :as resp}]
   (when error
     (throw (fetch-error-ex-info opts error)))
-  (letk [[body] (parse-response read-opts resp)]
+  (let [{:keys [body]} (parse-response read-opts resp)]
     (condp = status
-      200 (assoc-when body ::etag (:etag headers))
+      200 (cond-> body (:etag headers) (assoc ::etag (:etag headers)))
       (throw (fetch-status-ex-info opts status body)))))
 
 (defn- extract-uri [resource]
@@ -321,7 +318,7 @@
                {:method :get
                 :url (str (:href query))
                 :headers {"Accept" "application/transit+json"}
-                :query-params (map-vals (partial t/write-str write-opts) args)
+                :query-params (into {} (map (fn [[k v]] [k (t/write-str write-opts v)])) args)
                 :as :stream}
                opts)
              (callback ch #(process-fetch-resp read-opts %)))
@@ -417,7 +414,7 @@
     (throw (update-error-ex-info opts error)))
   (when (not= 204 status)
     (throw (update-status-ex-info opts status (:body (parse-response read-opts resp)))))
-  (assoc-when rep ::etag (:etag headers)))
+  (cond-> rep (:etag headers) (assoc ::etag (:etag headers))))
 
 (s/defn update
   "Updates the resource to reflect the state of the given representation using
