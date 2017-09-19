@@ -6,7 +6,7 @@
   (keyword (str/lower-case header)))
 
 (defn keyword-headers [headers]
-  (into {} (map (fn [[k v]] [k (keyword-header v)])) headers))
+  (into {} (map (fn [[k v]] [(keyword-header k) v])) headers))
 
 (defn- set-parameter-value! [write-opts uri k v]
   (.setParameterValue uri (name k) (t/write write-opts v)))
