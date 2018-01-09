@@ -12,7 +12,7 @@ Protocol (HAP) client.
 To install, just add the following to your project dependencies:
 
 ```clojure
-[org.clojars.akiel/hap-client-clj "0.5.1"]
+[org.clojars.akiel/hap-client-clj "0.6"]
 ```
 
 ## Usage
