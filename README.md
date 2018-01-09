@@ -3,6 +3,7 @@ __This software is ALPHA.__
 # HAP Client Clojure
 
 [![Build Status](https://travis-ci.org/alexanderkiel/hap-client-clj.svg?branch=master)](https://travis-ci.org/alexanderkiel/hap-client-clj)
+[![Dependencies Status](https://versions.deps.co/alexanderkiel/hap-client-clj/status.svg)](https://versions.deps.co/alexanderkiel/hap-client-clj)
 
 A Clojure(Script) library which implements a generic Hypermedia Application
 Protocol (HAP) client.
