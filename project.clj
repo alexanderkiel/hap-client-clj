@@ -1,4 +1,4 @@
-(defproject org.clojars.akiel/hap-client-clj "0.8-SNAPSHOT"
+(defproject org.clojars.akiel/hap-client-clj "0.8"
   :description "A Clojure(Script) HAP client library."
   :url "https://github.com/alexanderkiel/hap-client-clj"
 
